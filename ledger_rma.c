@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
 
     /* create private memory */
     int* shared_int;
-    int rank_share = 0;
+    int rank_shared = 0;
     /* collectively declare memory as remotely accessible */
     MPI_Win my_win;
     MPI_Win_allocate(1 * sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &shared_int, &my_win);
@@ -44,16 +44,18 @@ int main(int argc, char** argv) {
     MPI_Win_fence(0, my_win);//sync close
 
     int recv = 0;
-    MPI_Win_fence(0, my_win);//collective sync open
-    MPI_Get(&recv, 1, MPI_INT, rank_share, 0, 1, MPI_INT, my_win);
+    //MPI_Win_fence(0, my_win);//collective sync open
+    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, rank_shared, 0, my_win);//MPI_LOCK_SHARED
+    MPI_Get(&recv, 1, MPI_INT, rank_shared, 0, 1, MPI_INT, my_win);
     printf("my rank = %d, read rank_0 content = %d\n", my_rank, recv);
-    MPI_Put(&my_rank, 1, MPI_INT, rank_share, 0 ,1, MPI_INT, my_win);
+    MPI_Put(&my_rank, 1, MPI_INT, rank_shared, 0 ,1, MPI_INT, my_win);
 //    MPI_Win_fence(0, my_win);//sync close
 //
 //    MPI_Win_fence(0, my_win);//sync open
-    MPI_Get(&recv, 1, MPI_INT, rank_share, 0, 1, MPI_INT, my_win);
+    MPI_Get(&recv, 1, MPI_INT, rank_shared, 0, 1, MPI_INT, my_win);
     printf("After put: my rank = %d, read rank_0 content = %d\n", my_rank, recv);
-    MPI_Win_fence(0, my_win);//sync close
+    //MPI_Win_fence(0, my_win);//sync close
+    MPI_Win_unlock(rank_shared, my_win);
 
 
 
