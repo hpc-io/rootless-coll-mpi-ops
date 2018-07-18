@@ -13,6 +13,33 @@ typedef struct Mail_bag{
     mail* bag;
 }mailbag;
 
+int mailbag_get(void *buf_recv, int mail_count, int mail_size, int target_rank, MPI_Aint target_offset, MPI_Win target_win, int default_lock){
+    int get_size = mail_count * mail_size;
+    if(default_lock) {
+        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, target_rank, 0, target_win);//MPI_LOCK_EXCLUSIVE, MPI_LOCK_SHARED
+    }
+
+    MPI_Get(buf_recv, 2 * get_size, MPI_CHAR, target_rank, 0, 2 * MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, target_win);
+
+    if(default_lock) {
+        MPI_Win_unlock(target_rank, target_win);
+    }
+    return 0;
+}
+
+int mailbag_put(const void *buf_src, int mail_count, int mail_size, int target_rank, MPI_Aint target_offset, MPI_Win target_win, int default_lock){
+    int put_size = mail_count * mail_size;
+    if(default_lock) {
+        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, target_rank, 0, target_win);//MPI_LOCK_EXCLUSIVE, MPI_LOCK_SHARED
+    }
+
+    MPI_Put(buf_src, put_size, MPI_CHAR, target_rank, target_offset, put_size, MPI_CHAR, target_win);
+
+    if(default_lock) {
+        MPI_Win_unlock(target_rank, target_win);
+    }
+    return 0;
+}
 int main(int argc, char** argv) {
     // Initialize the MPI environment
 
@@ -70,7 +97,7 @@ int main(int argc, char** argv) {
     }
 
     MPI_Win_fence(0, my_win);//collective sync open
-    MPI_Put(&buf_put, MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, my_rank, 0 , MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, my_win);
+    mailbag_put(&buf_put, MAIL_BAG_SIZE, MSG_SIZE_MAX, my_rank, 0, my_win, 0);
     MPI_Win_fence(0, my_win);//sync close
 
     int recv = 0;
@@ -79,43 +106,15 @@ int main(int argc, char** argv) {
         rank_next = 0;
     }
     printf("My rank = %d, next rank = %d\n", my_rank, rank_next);
-    //MPI_Win_fence(0, my_win);//collective sync open
-    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, rank_next, 0, my_win);//MPI_LOCK_SHARED
-    //MPI_Win_fence(0, my_win);
-    MPI_Put(&buf_put, MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, rank_next, MAIL_BAG_SIZE * MSG_SIZE_MAX, MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, my_win);
-    //read self, and expect to also get msg from previous rank
-    MPI_Win_unlock(rank_next, my_win);
-    //MPI_Win_fence(0, my_win);
 
-    //printf("my rank = %d, read rank_0 content = %d\n", my_rank, recv);
-    //MPI_Put(&my_rank, 1, MPI_INT, rank_shared, 0 ,1, MPI_INT, my_win);
-//    MPI_Win_fence(0, my_win);//sync close
-//
-//    MPI_Win_fence(0, my_win);//sync open
-    //MPI_Get(&recv, 1, MPI_INT, rank_shared, 0, 1, MPI_INT, my_win);
-    //printf("After put: my rank = %d, read rank_0 content = %d\n", my_rank, recv);
-    //MPI_Win_fence(0, my_win);//sync close
+    mailbag_put(&buf_put, MAIL_BAG_SIZE, MSG_SIZE_MAX, rank_next, MAIL_BAG_SIZE * MSG_SIZE_MAX, my_win, 1);
 
-    //MPI_Win_fence(0, my_win);
-    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, my_rank, 0, my_win);//MPI_LOCK_SHARED
-    MPI_Get(&buf_get, 2 * MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, my_rank, 0, 2 * MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, my_win);
-    MPI_Win_unlock(my_rank, my_win);
-    //MPI_Win_fence(0, my_win);
+    mailbag_get(&buf_get, 2 * MAIL_BAG_SIZE, MSG_SIZE_MAX, my_rank, 0, my_win, 1);
+
     for(int i = 0; i < 2 * MAIL_BAG_SIZE; i++){
         //printf("%s\n", my_bag.bag[i].message);
         printf("Print buf_get at rank %d: %s\n", my_rank, buf_get[i]);
     }
-
-    //rotate mailbags:
-
-
-
-    //verify rank, window and content
-
-
-    //lock ops: read, add, read.
-
-
 
     free(my_bag.bag);
     MPI_Win_free(&my_win);
