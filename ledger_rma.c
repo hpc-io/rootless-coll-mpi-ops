@@ -4,48 +4,116 @@
 #define MAIL_BAG_SIZE 4
 #define MSG_SIZE_MAX 64
 
-typedef struct Mail_entry{
+typedef struct Mail_entry {
     char* message;
-}mail;
+} mail;
 
-typedef struct Mail_bag{
+typedef struct Mail_bag {
     unsigned int mail_cnt;
     mail* bag;
-}mailbag;
+} mailbag;
 
-int mailbag_get(void *buf_recv, int mail_count, int mail_size, int target_rank, MPI_Aint target_offset, MPI_Win target_win, int default_lock){
+typedef struct BCastCommunicator {
+    int my_rank;
+    int is_bidirectional;
+    int* send_list_left;
+    int* send_list_right;
+    int send_list_left_len;
+    int send_list_right_len;
+    int* recv_list_left;
+    int* recv_list_right;
+    int recv_list_left_len;
+    int recv_list_right_len;
+
+} bcomm;
+
+int routing_table_init(int world_size, int my_rank, int bidirectional,
+        bcomm* my_comm) {
+    //fill send/recv lists
+    return 0;
+}
+
+int bcast(bcomm* my_comm, void* send_buf, int send_size, int msg_tag) {
+    //send to send_list_left and send_list_right
+
+    for (int i = 0; i < my_comm->send_list_left_len; i++) {
+        MPI_Request request;
+        MPI_Isend(send_buf, send_size, MPI_CHAR, my_comm->send_list_left[i],
+                msg_tag, MPI_COMM_WORLD, &request);
+    }
+    if (my_comm->is_bidirectional == 1) {
+        for (int i = 0; i < my_comm->send_list_right_len; i++) {
+            MPI_Request request;
+            MPI_Isend(send_buf, send_size, MPI_CHAR,
+                    my_comm->send_list_right[i], msg_tag, MPI_COMM_WORLD,
+                    &request);
+        }
+    }
+
+    //wait for all_received
+    //assume only 1 msg, and its ready to be received
+    int received_cnt = 0;
+    MPI_Request* recv_left_status = malloc(my_comm->recv_list_left_len * sizeof(MPI_Request));
+
+    for (int i = 0; i < my_comm->recv_list_left_len; i++) {
+        MPI_Request request;
+        char recv_buf[MSG_SIZE_MAX] = { ' ' };
+        MPI_Irecv(recv_buf, MSG_SIZE_MAX, MPI_CHAR, my_comm->recv_list_left[i],
+                0, MPI_COMM_WORLD, &recv_left_status[i]);
+    }
+    int flag;
+    MPI_Status* status_array = malloc(my_comm->recv_list_left_len * sizeof(MPI_Status));
+    //MPI_Testall(my_comm->recv_list_left_len, recv_left_status, &flag, status_array); //Non-blocking option
+    MPI_Waitall(my_comm->recv_list_left_len, recv_left_status, status_array); //blocking
+
+    free(recv_left_status);
+    free(status_array);
+    return 0;
+}
+
+//tested
+int rma_mailbag_get(void *buf_recv, int mail_count, int mail_size,
+        int target_rank, MPI_Aint target_offset, MPI_Win target_win,
+        int default_lock) {
     int get_size = mail_count * mail_size;
-    if(default_lock) {
-        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, target_rank, 0, target_win);//MPI_LOCK_EXCLUSIVE, MPI_LOCK_SHARED
+    if (default_lock) {
+        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, target_rank, 0, target_win); //MPI_LOCK_EXCLUSIVE, MPI_LOCK_SHARED
     }
 
-    MPI_Get(buf_recv, 2 * get_size, MPI_CHAR, target_rank, 0, 2 * MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, target_win);
+    MPI_Get(buf_recv, 2 * get_size, MPI_CHAR, target_rank, 0,
+            2 * MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, target_win);
 
-    if(default_lock) {
+    if (default_lock) {
         MPI_Win_unlock(target_rank, target_win);
     }
     return 0;
 }
 
-int mailbag_put(const void *buf_src, int mail_count, int mail_size, int target_rank, MPI_Aint target_offset, MPI_Win target_win, int default_lock){
+//tested
+int rma_mailbag_put(const void *buf_src, int mail_count, int mail_size,
+        int target_rank, MPI_Aint target_offset, MPI_Win target_win,
+        int default_lock) {
     int put_size = mail_count * mail_size;
-    if(default_lock) {
-        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, target_rank, 0, target_win);//MPI_LOCK_EXCLUSIVE, MPI_LOCK_SHARED
+    if (default_lock) {
+        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, target_rank, 0, target_win); //MPI_LOCK_EXCLUSIVE, MPI_LOCK_SHARED
     }
 
-    MPI_Put(buf_src, put_size, MPI_CHAR, target_rank, target_offset, put_size, MPI_CHAR, target_win);
+    MPI_Put(buf_src, put_size, MPI_CHAR, target_rank, target_offset, put_size,
+            MPI_CHAR, target_win);
 
-    if(default_lock) {
+    if (default_lock) {
         MPI_Win_unlock(target_rank, target_win);
     }
     return 0;
 }
+
 int main(int argc, char** argv) {
     // Initialize the MPI environment
 
-    char buf_put[MAIL_BAG_SIZE][MSG_SIZE_MAX] = {' '};
-    char buf_get[2 * MAIL_BAG_SIZE][MSG_SIZE_MAX] = {' '};
-    unsigned int WIN_SIZE_MIN = MAIL_BAG_SIZE * MSG_SIZE_MAX * (sizeof(char)) + sizeof(unsigned int);
+    char buf_put[MAIL_BAG_SIZE][MSG_SIZE_MAX] = { ' ' };
+    char buf_get[2 * MAIL_BAG_SIZE][MSG_SIZE_MAX] = { ' ' };
+    unsigned int WIN_SIZE_MIN = MAIL_BAG_SIZE * MSG_SIZE_MAX * (sizeof(char))
+            + sizeof(unsigned int);
     MPI_Init(NULL, NULL);
 
     // Get the number of processes
@@ -55,11 +123,12 @@ int main(int argc, char** argv) {
     int rank_shared = 0;
     /* collectively declare memory as remotely accessible */
     MPI_Win my_win;
-    MPI_Win_allocate(2 * MAIL_BAG_SIZE * MSG_SIZE_MAX * sizeof(char), sizeof(char), MPI_INFO_NULL, MPI_COMM_WORLD, &shared_int, &my_win);
+    MPI_Win_allocate(2 * MAIL_BAG_SIZE * MSG_SIZE_MAX * sizeof(char),
+            sizeof(char), MPI_INFO_NULL, MPI_COMM_WORLD, &shared_int, &my_win);
     //first half for get, second half for put
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    if(world_size < 2){
+    if (world_size < 2) {
         printf("Too less processes launched: must be at least 2.");
         return 0;
     }
@@ -79,44 +148,40 @@ int main(int argc, char** argv) {
 
     //initialize a var in local window, set to rank.
 
-    mailbag my_bag;
-    my_bag.mail_cnt = 0;
-    my_bag.bag = malloc(MAIL_BAG_SIZE * sizeof(mail));
     printf("Filling mailbags at rank_%d: \n", my_rank);
-    for(int i = 0; i < MAIL_BAG_SIZE; i++){
-        my_bag.bag[i].message = malloc(MSG_SIZE_MAX*sizeof(char));
-        sprintf((my_bag.bag[i].message), "msg%d_rank%d", i, my_rank);//mailbag struct
-        sprintf(buf_put[i], "msg%d_rank%d", i, my_rank);//plain 2D char array
+    for (int i = 0; i < MAIL_BAG_SIZE; i++) {
+        sprintf(buf_put[i], "msg%d_rank%d", i, my_rank); //plain 2D char array
     }
     //memset(my_bag.bag, '-', MSG_SIZE_MAX*MAIL_BAG_SIZE);
 
     printf("Print mailbag from rank %d: \n", my_rank);
-    for(int i = 0; i < MAIL_BAG_SIZE; i++){
+    for (int i = 0; i < MAIL_BAG_SIZE; i++) {
         //printf("%s\n", my_bag.bag[i].message);
         printf("buf_put at rank %d: %s\n", my_rank, buf_put[i]);
     }
 
-    MPI_Win_fence(0, my_win);//collective sync open
-    mailbag_put(&buf_put, MAIL_BAG_SIZE, MSG_SIZE_MAX, my_rank, 0, my_win, 0);
-    MPI_Win_fence(0, my_win);//sync close
+    MPI_Win_fence(0, my_win); //collective sync open
+    rma_mailbag_put(&buf_put, MAIL_BAG_SIZE, MSG_SIZE_MAX, my_rank, 0, my_win,
+            0);
+    MPI_Win_fence(0, my_win); //sync close
 
     int recv = 0;
     int rank_next = my_rank + 1;
-    if(my_rank == world_size - 1) {
+    if (my_rank == world_size - 1) {
         rank_next = 0;
     }
     printf("My rank = %d, next rank = %d\n", my_rank, rank_next);
 
-    mailbag_put(&buf_put, MAIL_BAG_SIZE, MSG_SIZE_MAX, rank_next, MAIL_BAG_SIZE * MSG_SIZE_MAX, my_win, 1);
+    rma_mailbag_put(&buf_put, MAIL_BAG_SIZE, MSG_SIZE_MAX, rank_next,
+            MAIL_BAG_SIZE * MSG_SIZE_MAX, my_win, 1);
 
-    mailbag_get(&buf_get, 2 * MAIL_BAG_SIZE, MSG_SIZE_MAX, my_rank, 0, my_win, 1);
+    rma_mailbag_get(&buf_get, 2 * MAIL_BAG_SIZE, MSG_SIZE_MAX, my_rank, 0,
+            my_win, 1);
 
-    for(int i = 0; i < 2 * MAIL_BAG_SIZE; i++){
+    for (int i = 0; i < 2 * MAIL_BAG_SIZE; i++) {
         //printf("%s\n", my_bag.bag[i].message);
         printf("Print buf_get at rank %d: %s\n", my_rank, buf_get[i]);
     }
-
-    free(my_bag.bag);
     MPI_Win_free(&my_win);
 
     MPI_Finalize();
