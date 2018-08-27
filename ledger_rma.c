@@ -93,7 +93,7 @@ int routing_table_init(bcomm* my_bcomm, MPI_Comm comm) {
         for(int i = 0; i <= my_bcomm->my_level; i++){
             my_bcomm->send_list[i] = (int)(my_bcomm->my_rank + pow(2, i)) %  my_bcomm->world_size;
             //my_bcomm->recv_list[i] = (int)(my_bcomm->my_rank - pow(2, i) + my_bcomm->world_size) %  my_bcomm->world_size;
-            printf("Rank %d, level = %d send_to %d\n", my_bcomm->my_rank, my_bcomm->my_level, my_bcomm->send_list[i]);
+            //printf("Rank %d, level = %d send_to %d\n", my_bcomm->my_rank, my_bcomm->my_level, my_bcomm->send_list[i]);
         }
     }else{
         my_bcomm->recv_list_len = my_bcomm->my_level + 1;
@@ -105,15 +105,16 @@ int routing_table_init(bcomm* my_bcomm, MPI_Comm comm) {
         for(int i = 0; i <= my_bcomm->my_level; i++){
             my_bcomm->send_list[i] = (int)(my_bcomm->my_rank + pow(2, i)) %  my_bcomm->world_size;
             //my_bcomm->recv_list[i] = (int)(my_bcomm->my_rank - pow(2, i) + my_bcomm->world_size) %  my_bcomm->world_size;
-            if(my_bcomm->my_rank != my_bcomm->world_size - 1)
-                printf("Rank %d, level = %d send_to %d\n", my_bcomm->my_rank, my_bcomm->my_level, my_bcomm->send_list[i]);
+            if(my_bcomm->my_rank != my_bcomm->world_size - 1){
+                //printf("Rank %d, level = %d send_to %d\n", my_bcomm->my_rank, my_bcomm->my_level, my_bcomm->send_list[i]);
+            }
         }
         if(my_bcomm->my_rank == my_bcomm->world_size - 1){//patch for rank n-1
             my_bcomm->send_list[0] = 0;
-            printf("Rank %d, level = %d send_to %d\n", my_bcomm->my_rank, my_bcomm->my_level, my_bcomm->send_list[0]);
+            //printf("Rank %d, level = %d send_to %d\n", my_bcomm->my_rank, my_bcomm->my_level, my_bcomm->send_list[0]);
             for(int i = 1; i < my_bcomm->my_level; i++){
                 my_bcomm->send_list[i] = -1;
-                printf("Rank %d, level = %d send_to %dn", my_bcomm->my_rank, my_bcomm->my_level, my_bcomm->send_list[i]);
+                //printf("Rank %d, level = %d send_to %dn", my_bcomm->my_rank, my_bcomm->my_level, my_bcomm->send_list[i]);
             }
         }
     }
@@ -139,7 +140,7 @@ int routing_table_init(bcomm* my_bcomm, MPI_Comm comm) {
     my_bcomm->recv_buf = (char*)malloc(MSG_SIZE_MAX * sizeof(char));
     //my_bcomm->irecv_reqs = malloc(my_bcomm->recv_list_len * sizeof(MPI_Request));
     my_bcomm->isend_reqs = malloc(my_bcomm->send_list_len * sizeof(MPI_Request));
-    printf("routing_table_init loop MPI_Irecv...\n");
+    //printf("routing_table_init loop MPI_Irecv...\n");
     MPI_Irecv(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, MPI_ANY_SOURCE, 0, my_bcomm->my_comm, &(my_bcomm->irecv_req));//MPI_ANY_TAG
 //    for (int i = 0; i < my_bcomm->recv_list_len; i++) {//was recv_buf[i]
 //        //printf("recv_forward recving at rank %d\n", my_comm->my_rank);
@@ -263,7 +264,7 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
                 if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
                     if(my_bcomm->send_list[j] != -1){
 
-                        printf("recv_forward: Rank %d received from rank %d, forward to rank %d: %s, age = %d\n", my_bcomm->my_rank, status.MPI_SOURCE, my_bcomm->send_list[j], my_bcomm->recv_buf + 2*sizeof(int), age);
+                        //printf("recv_forward: Rank %d received from rank %d, forward to rank %d: %s, age = %d\n", my_bcomm->my_rank, status.MPI_SOURCE, my_bcomm->send_list[j], my_bcomm->recv_buf + 2*sizeof(int), age);
                         send_cnt++;
 
                         memcpy(my_bcomm->recv_buf + sizeof(int), &age , sizeof(int));
@@ -290,7 +291,7 @@ int bcast(bcomm* my_comm, void* send_buf, int sn, int send_size) {
 
     for (int i = 0; i < my_comm->send_list_len; i++) {
         if(my_comm->send_list[i] != -1){
-            printf("bcast sending... on rank %d, send_buf = %s, send to rank %d\n", my_comm->my_rank, send_buf + 2*sizeof(int), my_comm->send_list[i]);
+            //printf("bcast sending... on rank %d, send_buf = %s, send to rank %d\n", my_comm->my_rank, send_buf + 2*sizeof(int), my_comm->send_list[i]);
             MPI_Request request;
             MPI_Isend(send_buf, send_size, MPI_CHAR, my_comm->send_list[i],
                     0, MPI_COMM_WORLD, &my_comm->isend_reqs[i]);
@@ -421,7 +422,7 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm){
     snprintf(next_rank_str, 10, "%d", next_rank);
     int sn = 0;
     //if(starter == my_bcomm->my_rank){
-        printf("I'm the starter: rank %d, next rank is %d\n", my_bcomm->my_rank, next_rank);
+    //printf("I'm the starter: rank %d, next rank is %d\n", my_bcomm->my_rank, next_rank);
         bcast(my_bcomm, next_rank_str, sn, MSG_SIZE_MAX);
     //}
 
@@ -444,16 +445,15 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm){
             memcpy(&age, recv_buf, sizeof(int));
             strcat(result_buf, recv_buf + sizeof(int));//ranks
             strcat(result_buf, ",");
-            printf("Rank %d recv_buf(string) = %s, age = %d, i = %d, bcast_cnt = %d\n", my_bcomm->my_rank,
-                    recv_buf + sizeof(int), age, i, bcast_cnt);
+            //printf("Rank %d recv_buf(string) = %s, age = %d, i = %d, bcast_cnt = %d\n", my_bcomm->my_rank,
+            //        recv_buf + sizeof(int), age, i, bcast_cnt);
             //printf("5.3\n");
             if (recv_rank == my_bcomm->my_rank && bcast_cnt < cnt) {            //&& bcast_cnt < cnt
                 bcast_cnt++;
                 int next_rank = random_rank(my_bcomm->my_rank, my_bcomm->world_size);
                 char next_rank_str[MSG_SIZE_MAX];
                 snprintf(next_rank_str, 10, "%d", next_rank);            //my_bcomm->msg_life_max
-                printf("Round %d -------------- rank %d: my turn! next_rank = %d, bcast str = %s\n", bcast_cnt,
-                        my_bcomm->my_rank, next_rank, next_rank_str);
+                //printf("Round %d -------------- rank %d: my turn! next_rank = %d, bcast str = %s\n", bcast_cnt, my_bcomm->my_rank, next_rank, next_rank_str);
                 //printf("6\n");
                 sn++;
                 bcast(my_bcomm, next_rank_str, sn, MSG_SIZE_MAX);
@@ -487,24 +487,24 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm){
         }
         //usleep(50*1000);//100ms
     }
-    //usleep(5000*1000);//100ms
+    usleep(500*1000);//100ms
     done = 0;
     MPI_Ibarrier(my_bcomm->my_comm, &req);
     while(!done){// extended running of recv_forward to accommodate msgs in flight
         MPI_Test(&req, &done, &stat);
         if (recv_forward(my_bcomm, recv_buf) == 0){
-            printf("Extra MPI_Ibarrier: rank %d, str = %s\n", my_bcomm->my_rank, recv_buf + sizeof(int));
+            //printf("Extra MPI_Ibarrier: rank %d, str = %s\n", my_bcomm->my_rank, recv_buf + sizeof(int));
             int age = 0;
             memcpy(&age, recv_buf, sizeof(int));
             strcat(result_buf, recv_buf + sizeof(int));
             strcat(result_buf, ",");
         }
-        usleep(500*1000);//100ms
+        //usleep(500*1000);//100ms
     }
 
 
     MPI_Barrier(my_bcomm->my_comm);
-    printf("Rank %d reports:  ================= Hacky sack done, round # = %d . received %lu times, received sequence = %s=================\n", my_bcomm->my_rank, bcast_cnt, strlen(result_buf)/2, result_buf);
+    printf("Rank %d reports:  Hacky sack done, round # = %d . received %lu times, received sequence = %s\n", my_bcomm->my_rank, bcast_cnt, strlen(result_buf)/2, result_buf);
     free(recv_buf);
 
     return 0;
