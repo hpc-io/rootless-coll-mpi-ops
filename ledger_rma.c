@@ -270,6 +270,7 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
                         memcpy(my_bcomm->recv_buf + sizeof(int), &age , sizeof(int));
                         MPI_Isend(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, my_bcomm->send_list[j], 0,
                                 my_bcomm->my_comm, &(my_bcomm->isend_reqs[j]));    //&my_bcomm->isend_reqs[j]
+                        //MPI_Send(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, my_bcomm->send_list[j], 0, my_bcomm->my_comm);
                     }
                 }
             }
@@ -405,6 +406,7 @@ int cleanup_Ibarrier(bcomm* my_bcomm, int cnt, int sleep_ms){
 
 int hacky_sack(int cnt, int starter, bcomm* my_bcomm){
     char result_buf[1024] = {'\0'};
+    int recved = 0;
     //printf("Hacky sack start ...\n");
 
 //    char**recv_buf = (char**)malloc(my_bcomm->recv_list_len * sizeof(char*));
@@ -442,9 +444,10 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm){
             recv_rank = atoi(recv_buf + sizeof(int));        // +1 to skip the first byte which is the left life time.
             //printf("5.2\n");
             int age = 0;
-            memcpy(&age, recv_buf, sizeof(int));
-            strcat(result_buf, recv_buf + sizeof(int));//ranks
-            strcat(result_buf, ",");
+            recved++;
+//            memcpy(&age, recv_buf, sizeof(int));
+//            strcat(result_buf, recv_buf + sizeof(int));//ranks
+//            strcat(result_buf, ",");
             //printf("Rank %d recv_buf(string) = %s, age = %d, i = %d, bcast_cnt = %d\n", my_bcomm->my_rank,
             //        recv_buf + sizeof(int), age, i, bcast_cnt);
             //printf("5.3\n");
@@ -481,9 +484,10 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm){
         MPI_Test(&req, &done, &stat);
         if (recv_forward(my_bcomm, recv_buf) == 0){
             int age = 0;
-            memcpy(&age, recv_buf, sizeof(int));
-            strcat(result_buf, recv_buf + sizeof(int));
-            strcat(result_buf, ",");
+            recved++;
+//            memcpy(&age, recv_buf, sizeof(int));
+//            strcat(result_buf, recv_buf + sizeof(int));
+//            strcat(result_buf, ",");
         }
         //usleep(50*1000);//100ms
     }
@@ -495,16 +499,17 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm){
         if (recv_forward(my_bcomm, recv_buf) == 0){
             //printf("Extra MPI_Ibarrier: rank %d, str = %s\n", my_bcomm->my_rank, recv_buf + sizeof(int));
             int age = 0;
-            memcpy(&age, recv_buf, sizeof(int));
-            strcat(result_buf, recv_buf + sizeof(int));
-            strcat(result_buf, ",");
+            recved++;
+//            memcpy(&age, recv_buf, sizeof(int));
+//            strcat(result_buf, recv_buf + sizeof(int));
+//            strcat(result_buf, ",");
         }
         //usleep(500*1000);//100ms
     }
 
 
     MPI_Barrier(my_bcomm->my_comm);
-    printf("Rank %d reports:  Hacky sack done, round # = %d . received %lu times, received sequence = %s\n", my_bcomm->my_rank, bcast_cnt, strlen(result_buf)/2, result_buf);
+    printf("Rank %d reports:  Hacky sack done, round # = %d . received %d times. \n", my_bcomm->my_rank, bcast_cnt, recved);
     free(recv_buf);
 
     return 0;
