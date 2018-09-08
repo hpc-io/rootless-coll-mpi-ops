@@ -368,19 +368,16 @@ int bcomm_teardown(bcomm* my_bcomm) {
     return recv_cnt;
 }
 
+int prev_rank(int my_rank, int world_size) {
+    return (my_rank - 1) % world_size;
+}
+
 int random_rank(int my_rank, int world_size) {
-//    time_t t;
-//    srand((unsigned) time(&t) + getpid());
-    int next_rank = my_rank;
-//    while(next_rank == my_rank){
-//        next_rank = rand() % world_size;
-//    }
-//
-//    (my_rank + 1 < world_size) ? (next_rank = my_rank + 1) : (next_rank = (my_rank + 1) % world_size);
-    if (my_rank == 0)
-        next_rank = world_size - 1;
-    else
-        next_rank = my_rank - 1;
+    int next_rank;
+
+    do {
+        next_rank = rand() % world_size;
+    } while(next_rank == my_rank);
 
     return next_rank;
 }
@@ -397,7 +394,7 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     int recv_msg_cnt;
     int my_rank;
 
-    next_rank = random_rank(my_bcomm->my_rank, my_bcomm->world_size);
+    next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
     snprintf(next_rank_str, 10, "%d", next_rank);
 
     time_start = get_time_usec();
@@ -413,7 +410,7 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
                 int next_rank;
 
                 bcast_cnt++;
-                next_rank = random_rank(my_bcomm->my_rank, my_bcomm->world_size);
+                next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
                 snprintf(next_rank_str, 10, "%d", next_rank);
                 sn++;
                 bcast(my_bcomm, next_rank_str, sn, MSG_SIZE_MAX);
@@ -438,6 +435,9 @@ int main(int argc, char** argv) {
     bcomm* my_comm;
     int game_cnt;
     int init_rank;
+    time_t t;
+
+    srand((unsigned) time(&t) + getpid());
 
     MPI_Init(NULL, NULL);
 
