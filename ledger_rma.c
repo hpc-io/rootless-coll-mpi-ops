@@ -385,65 +385,73 @@ int random_rank(int my_rank, int world_size) {
     return next_rank;
 }
 
-int hacky_sack(int cnt, int starter, bcomm* my_bcomm, int sleep_us) {
+int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     char recv_buf[MSG_SIZE_MAX] = { '\0' };
-    int next_rank = random_rank(my_bcomm->my_rank, my_bcomm->world_size);
+    int next_rank;
     char next_rank_str[MSG_SIZE_MAX];
-    snprintf(next_rank_str, 10, "%d", next_rank);
     int sn = 0;
-    unsigned long time_start = get_time_usec();
+    unsigned long time_start;
+    unsigned long time_end;
+    unsigned long phase_1;
+    int bcast_cnt;
+    int recv_msg_cnt;
+    int my_rank;
+
+    next_rank = random_rank(my_bcomm->my_rank, my_bcomm->world_size);
+    snprintf(next_rank_str, 10, "%d", next_rank);
+
+    time_start = get_time_usec();
+
     bcast(my_bcomm, next_rank_str, sn, MSG_SIZE_MAX);
+    bcast_cnt = 1;
 
-    int bcast_cnt = 1;
-    int num = cnt * log2(my_bcomm->world_size);
-    int recv_rank = -1;
-
-    for (int i = 0; bcast_cnt < cnt; i++) {
+    while (bcast_cnt < cnt) {
         if (recv_forward(my_bcomm, recv_buf) == 0) {
-            recv_rank = atoi(recv_buf + sizeof(int));
-//            char origin_rank[16] = {'\0'};
-//            sprintf(origin_rank, "%d", (recv_rank + 1)%my_bcomm->world_size);
-//            strcat(result_buf, origin_rank);//ranks
-//            strcat(result_buf, ",");
+            int recv_rank = atoi(recv_buf + sizeof(int));
+
             if (recv_rank == my_bcomm->my_rank) {
+                int next_rank;
+
                 bcast_cnt++;
-                int next_rank = random_rank(my_bcomm->my_rank, my_bcomm->world_size);
-                char next_rank_str[MSG_SIZE_MAX];
+                next_rank = random_rank(my_bcomm->my_rank, my_bcomm->world_size);
                 snprintf(next_rank_str, 10, "%d", next_rank);
                 sn++;
                 bcast(my_bcomm, next_rank_str, sn, MSG_SIZE_MAX);
             }
         }
-
-        if (bcast_cnt >= cnt)
-            break;
     }
 
-    unsigned long time_end = get_time_usec();
-    unsigned long phase_1 = time_end - time_start;
-    int my_rank = my_bcomm->my_rank;
+    time_end = get_time_usec();
+    phase_1 = time_end - time_start;
 
-    int recv_msg_cnt = bcomm_teardown(my_bcomm);
+    my_rank = my_bcomm->my_rank;
+    recv_msg_cnt = bcomm_teardown(my_bcomm);
+
     MPI_Barrier(MPI_COMM_WORLD);
     printf("Rank %d reports:  Hacky sack done, round # = %d . received %d times.  Phase 1 cost %lu msecs\n", my_rank,
             bcast_cnt, recv_msg_cnt, phase_1 / 1000);
+
     return 0;
 }
 
 int main(int argc, char** argv) {
+    bcomm* my_comm;
+    int game_cnt;
+    int init_rank;
+
     MPI_Init(NULL, NULL);
-    bcomm* my_comm = malloc(sizeof(bcomm));
 
-    if (bcomm_init(my_comm, MPI_COMM_WORLD) != 0) {
+    my_comm = malloc(sizeof(bcomm));
+    if(bcomm_init(my_comm, MPI_COMM_WORLD) != 0)
         return 0;
-    }
 
-    int game_cnt = atoi(argv[2]);
+    game_cnt = atoi(argv[2]);
+    init_rank = atoi(argv[1]);
 
-    int init_rank = atoi(argv[1]);
-
-    hacky_sack(game_cnt, init_rank, my_comm, 1000);
+    hacky_sack(game_cnt, init_rank, my_comm);
 
     MPI_Finalize();
+
     return 0;
 }
+
