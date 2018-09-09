@@ -21,6 +21,8 @@ typedef struct BCastCommunicator {
 
     /* Skip ring fields */
     int my_level;                       /* Level of rank in ring */
+    int last_wall;                      /* The closest rank that has higher level than rank world_size - 1 */
+    int world_is_power_of_2;            /* Whether the world size is a power of 2 */
 
     /* Send fields */
     int send_channel_cnt;               /* # of outgoing channels from this rank */
@@ -108,21 +110,17 @@ int is_powerof2(int n) {
 }
 
 int get_level(int world_size, int rank) {
-    if (is_powerof2(world_size)) {
-        if (rank == 0) {
+    int l;
+
+    if (rank == 0) {
+        if (is_powerof2(world_size))
             return log2(world_size) - 1;
-        }
-    } else {
-        if (rank == 0) {
+        else
             return log2(world_size);
-        }
-// DO NOT set for world_size - 1!
-//        if(rank == world_size - 1)
-//            return 0;
     }
 
-    int l = 0;
-    while (rank != 0 && rank % 2 == 0) {
+    l = 0;
+    while (rank != 0 && (rank & 0x1) == 0) {
         rank >>= 1;
         l++;
     }
@@ -132,11 +130,11 @@ int get_level(int world_size, int rank) {
 //This returns the closest rank that has higher rank than rank world_size - 1
 int last_wall(int world_size) {
     int last_level = get_level(world_size, world_size - 1);
-    for (int i = world_size - 2; i > 0; i--) {
-        if (get_level(world_size, i) > last_level) {
+
+    for (int i = world_size - 2; i > 0; i--)
+        if (get_level(world_size, i) > last_level)
             return i;
-        }
-    }
+
     return 0; //not found
 }
 
@@ -164,11 +162,16 @@ bcomm *bcomm_init(MPI_Comm comm) {
     my_bcomm->my_bcast_cnt = 0;
     my_bcomm->bcast_recv_cnt = 0;
 
-    /* Set up send fields */
+    /* Skip ring counts */
     my_bcomm->my_level = my_bcomm->send_channel_cnt = get_level(my_bcomm->world_size, my_bcomm->my_rank);
+    my_bcomm->last_wall = last_wall(my_bcomm->world_size);
+    my_bcomm->world_is_power_of_2 = is_powerof2(my_bcomm->world_size);
+
+    /* Set up send fields */
+    my_bcomm->send_channel_cnt = my_bcomm->my_level;
     my_bcomm->send_list_len = my_bcomm->send_channel_cnt + 1;
     my_bcomm->send_list = malloc(my_bcomm->send_list_len * sizeof(int));
-    if (is_powerof2(my_bcomm->world_size)) {
+    if (my_bcomm->world_is_power_of_2) {
         for (int i = 0; i < my_bcomm->send_list_len; i++)
             my_bcomm->send_list[i] = (int) (my_bcomm->my_rank + pow(2, i)) % my_bcomm->world_size;
     } 
@@ -216,10 +219,7 @@ int msg_make(void* buf_inout, int origin, int sn) {
 }
 
 int msg_get_num(void* buf_in) {
-    //return ((int*) buf_in)[0];
-    int r = 0;
-    memcpy(&r, buf_in, sizeof(int));
-    return r;
+    return *((int*) buf_in);
 }
 
 int msg_life_update(void* buf_inout) { //return life before change
@@ -240,13 +240,13 @@ int msg_life_update(void* buf_inout) { //return life before change
 
     return life_left;
 }
+
 // Event progress tracking
 int check_passed_origin(bcomm* my_bcomm, int origin_rank, int to_rank) {
-    if (to_rank == origin_rank) {
-        return 1;
-    }
-
     int my_rank = my_bcomm->my_rank;
+
+    if (to_rank == origin_rank)
+        return 1;
 
     if (my_rank >= origin_rank) {
         if (to_rank > my_rank)
@@ -265,50 +265,61 @@ int check_passed_origin(bcomm* my_bcomm, int origin_rank, int to_rank) {
             return 1;
     }
 }
+
 // Used by all ranks
 int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
     MPI_Status status;
     int completed = 0;
+
+    /* Check if we've received any messages */
     MPI_Test(&my_bcomm->irecv_req, &completed, &status);
 
     if (completed) {
+        int origin;
+        int recv_level;
+        int send_cnt;
+        int upper_bound;
+
+        /* Increment # of messages received */
         my_bcomm->bcast_recv_cnt++;
 
-        int origin = msg_get_num(my_bcomm->recv_buf);
-
+        /* Parse received message */
+        origin = msg_get_num(my_bcomm->recv_buf);
         memcpy(recv_buf_out, my_bcomm->recv_buf + sizeof(int), MSG_SIZE_MAX - sizeof(int));
 
-        int recv_level = get_level(my_bcomm->world_size, status.MPI_SOURCE);
-
-        int send_cnt = 0;
-        int upper_bound = 0;
-
-        if (recv_level <= my_bcomm->my_level) { // my_bcomm->my_level; new msg, send to all channels//|| my_bcomm->my_rank != my_bcomm->world_size - 1
+        /* Determine which ranks to send to */
+        recv_level = get_level(my_bcomm->world_size, status.MPI_SOURCE);
+        if (recv_level <= my_bcomm->my_level)
             upper_bound = my_bcomm->send_channel_cnt;
-        } else {
+        else
             upper_bound = my_bcomm->send_channel_cnt - 1; // not send to same level
-        }
-
-        int lw = last_wall(my_bcomm->world_size);
-        if (my_bcomm->my_rank == my_bcomm->world_size - 1 && !is_powerof2(my_bcomm->world_size)
-                && status.MPI_SOURCE != lw) {
+        if (my_bcomm->my_rank == my_bcomm->world_size - 1 && !my_bcomm->world_is_power_of_2
+                && status.MPI_SOURCE != my_bcomm->last_wall)
             upper_bound = my_bcomm->send_channel_cnt; //forward all
-        }
 
+        /* Send messages */
+        send_cnt = 0;
         for (int j = 0; j <= upper_bound; j++) {
             if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
                 send_cnt++;
                 MPI_Isend(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
                         &(my_bcomm->isend_reqs[j]));
             }
+            else
+                break;
         }
 
+        /* Wait for all messages to be sent */
         MPI_Status isend_stat[send_cnt];
         MPI_Waitall(send_cnt, my_bcomm->isend_reqs, isend_stat);
+
+        /* Re-post receive, for next message */
         MPI_Irecv(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, MPI_ANY_SOURCE, 0, my_bcomm->my_comm,
                 &my_bcomm->irecv_req);
+
         return 0;
     }
+
     return -1;
 }
 
