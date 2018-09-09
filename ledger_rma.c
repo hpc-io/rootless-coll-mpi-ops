@@ -241,7 +241,7 @@ int msg_get_num(void* buf_in) {
 }
 
 // Event progress tracking
-int check_passed_origin(bcomm* my_bcomm, int origin_rank, int to_rank) {
+int check_passed_origin(const bcomm* my_bcomm, int origin_rank, int to_rank) {
     int my_rank = my_bcomm->my_rank;
 
     if (to_rank == origin_rank)
