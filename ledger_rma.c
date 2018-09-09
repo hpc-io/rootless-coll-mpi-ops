@@ -127,15 +127,15 @@ int get_level(int world_size, int rank) {
     return l;
 }
 
-//This returns the closest rank that has higher rank than rank world_size - 1
-int last_wall(int world_size) {
-    int last_level = get_level(world_size, world_size - 1);
+//This returns the closest rank that has higher level than rank 
+int last_wall(int rank) {
+    unsigned last_wall = rank;
 
-    for (int i = world_size - 2; i > 0; i--)
-        if (get_level(world_size, i) > last_level)
-            return i;
+    for(unsigned u = 1; u < (1024 * 1024 * 1024); u <<= 1)
+        if(u & last_wall)
+            return last_wall ^ u;
 
-    return 0; //not found
+     return 0;//not found
 }
 
 //Returns the non-zero rank with highest level. This is the only rank that can send to rank 0 and rank n-1.
@@ -163,8 +163,11 @@ bcomm *bcomm_init(MPI_Comm comm) {
     my_bcomm->bcast_recv_cnt = 0;
 
     /* Skip ring counts */
-    my_bcomm->my_level = my_bcomm->send_channel_cnt = get_level(my_bcomm->world_size, my_bcomm->my_rank);
-    my_bcomm->last_wall = last_wall(my_bcomm->world_size);
+    my_bcomm->my_level = get_level(my_bcomm->world_size, my_bcomm->my_rank);
+    if(my_bcomm->my_rank == 0)
+        my_bcomm->last_wall = pow(2, my_bcomm->my_level);
+    else
+        my_bcomm->last_wall = last_wall(my_bcomm->my_rank);
     my_bcomm->world_is_power_of_2 = is_powerof2(my_bcomm->world_size);
 
     /* Set up send fields */
@@ -273,45 +276,56 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
 
     /* Check if we've received any messages */
     MPI_Test(&my_bcomm->irecv_req, &completed, &status);
-
     if (completed) {
-        int origin;
-        int recv_level;
-        int send_cnt;
-        int upper_bound;
-
         /* Increment # of messages received */
         my_bcomm->bcast_recv_cnt++;
 
-        /* Parse received message */
-        origin = msg_get_num(my_bcomm->recv_buf);
+        /* Copy received message */
         memcpy(recv_buf_out, my_bcomm->recv_buf + sizeof(int), MSG_SIZE_MAX - sizeof(int));
 
-        /* Determine which ranks to send to */
-        recv_level = get_level(my_bcomm->world_size, status.MPI_SOURCE);
-        if (recv_level <= my_bcomm->my_level)
-            upper_bound = my_bcomm->send_channel_cnt;
-        else
-            upper_bound = my_bcomm->send_channel_cnt - 1; // not send to same level
-        if (my_bcomm->my_rank == my_bcomm->world_size - 1 && !my_bcomm->world_is_power_of_2
-                && status.MPI_SOURCE != my_bcomm->last_wall)
-            upper_bound = my_bcomm->send_channel_cnt; //forward all
+        /* Check for a rank that can forward messages */
+        if(my_bcomm->my_level > 0) {
+            int origin;
+            int send_cnt;
 
-        /* Send messages */
-        send_cnt = 0;
-        for (int j = 0; j <= upper_bound; j++) {
-            if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
-                send_cnt++;
-                MPI_Isend(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
-                        &(my_bcomm->isend_reqs[j]));
-            }
-            else
-                break;
-        }
+            /* Retrieve message's origin rank */
+            origin = msg_get_num(my_bcomm->recv_buf);
 
-        /* Wait for all messages to be sent */
-        MPI_Status isend_stat[send_cnt];
-        MPI_Waitall(send_cnt, my_bcomm->isend_reqs, isend_stat);
+            /* Determine which ranks to send to */
+            send_cnt = 0;
+            if (status.MPI_SOURCE > my_bcomm->last_wall) {
+                /* Send messages, to further ranks first */
+                for (int j = my_bcomm->send_channel_cnt; j >= 0; j--) {
+                    MPI_Isend(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
+                            &(my_bcomm->isend_reqs[send_cnt]));
+                    send_cnt++;
+                }
+            } /* end if */
+            else {
+                int upper_bound;
+
+                upper_bound = my_bcomm->send_channel_cnt - 1; // not send to same level
+
+                /* Avoid situation where world_size - 1 rank in non-power of 2 world_size shouldn't forward */
+                if(upper_bound >= 0) {
+                    /* Send messages, to further ranks first */
+                    for (int j = upper_bound; j >= 0; j--) {
+                        if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
+                            MPI_Isend(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
+                                    &(my_bcomm->isend_reqs[send_cnt]));
+                            send_cnt++;
+                        }
+                    }
+                } /* end if */
+            } /* end else */
+
+            /* Wait for all messages to be sent */
+            if(send_cnt > 0) {
+                MPI_Status isend_stat[send_cnt];
+
+                MPI_Waitall(send_cnt, my_bcomm->isend_reqs, isend_stat);
+            } /* end if */
+        } /* end if */
 
         /* Re-post receive, for next message */
         MPI_Irecv(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, MPI_ANY_SOURCE, 0, my_bcomm->my_comm,
