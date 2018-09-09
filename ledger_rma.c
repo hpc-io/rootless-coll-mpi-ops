@@ -144,11 +144,6 @@ int last_wall(int rank) {
      return 0;//not found
 }
 
-//Returns the non-zero rank with highest level. This is the only rank that can send to rank 0 and rank n-1.
-int tallest_rank(int world_size) {
-    return 0;
-}
-
 bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max) {
     bcomm* my_bcomm;
 
@@ -230,25 +225,6 @@ bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max) {
 
 int msg_get_num(void* buf_in) {
     return *((int*) buf_in);
-}
-
-int msg_life_update(void* buf_inout) { //return life before change
-    //printf("before update: %s, ", buf_inout);
-    int life_left;
-    char tmp;
-    if (strlen(buf_inout) <= 0) {
-        return -1;
-    }
-    memcpy(&tmp, buf_inout, 1);
-    //assume life <= 9
-    life_left = tmp - '0';
-    if (life_left == 0) {
-        return 0;
-    }
-    tmp = (life_left - 1) + '0';
-    memcpy(buf_inout, &tmp, 1);
-
-    return life_left;
 }
 
 // Event progress tracking
