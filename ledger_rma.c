@@ -402,7 +402,7 @@ int bcomm_teardown(bcomm* my_bcomm) {
     /* Retrieve the # of broadcasts we've received */
     recv_cnt = my_bcomm->bcast_recv_cnt;
 
-    /* Shut down skip ring */
+    /* Cancel outstanding non-blocking receive */
     MPI_Cancel(&my_bcomm->irecv_req);
 
     /* Release resources */
@@ -439,7 +439,7 @@ int random_rank(int my_rank, int world_size) {
 }
 
 int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
-    char *next_rank_str;
+    char *next_rank;
     unsigned long time_start;
     unsigned long time_end;
     unsigned long phase_1;
@@ -448,12 +448,12 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     int my_rank;
 
     /* Get pointer to sending buffer */
-    next_rank_str = my_bcomm->user_send_buf;
+    next_rank = my_bcomm->user_send_buf;
 
     time_start = get_time_usec();
 
     /* Compose message to send (in bcomm's send buffer) */
-    *(int *)next_rank_str = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
+    *(int *)next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
 
     /* Broadcast message */
     bcast(my_bcomm);
@@ -474,7 +474,7 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
                 } /* end if */
 
                 /* Compose message to send (in bcomm's send buffer) */
-                *(int *)next_rank_str = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
+                *(int *)next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
 
                 /* Broadcast message */
                 bcast(my_bcomm);
@@ -483,11 +483,11 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
         }
     }
 
-    time_end = get_time_usec();
-    phase_1 = time_end - time_start;
-
     my_rank = my_bcomm->my_rank;
     recv_msg_cnt = bcomm_teardown(my_bcomm);
+
+    time_end = get_time_usec();
+    phase_1 = time_end - time_start;
 
     MPI_Barrier(MPI_COMM_WORLD);
     printf("Rank %d reports:  Hacky sack done, round # = %d . received %d times.  Phase 1 cost %lu msecs\n", my_rank,
