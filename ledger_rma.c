@@ -424,6 +424,10 @@ int prev_rank(int my_rank, int world_size) {
     return (my_rank + (world_size - 1)) % world_size;
 }
 
+int next_rank(int my_rank, int world_size) {
+    return (my_rank + 1) % world_size;
+}
+
 int random_rank(int my_rank, int world_size) {
     int next_rank;
 
@@ -463,6 +467,12 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
             int recv_rank = *(int *)recv_buf;
 
             if (recv_rank == my_bcomm->my_rank) {
+                /* If there are outstanding messages being broadcast, wait for them now, before re-using buffer */
+                if(my_bcomm->bcast_send_cnt > 0) {
+                    MPI_Waitall(my_bcomm->bcast_send_cnt, my_bcomm->bcast_isend_reqs, my_bcomm->bcast_isend_stats);
+                    my_bcomm->bcast_send_cnt = 0;
+                } /* end if */
+
                 /* Compose message to send (in bcomm's send buffer) */
                 *(int *)next_rank_str = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
 
