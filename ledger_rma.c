@@ -212,15 +212,6 @@ bcomm *bcomm_init(MPI_Comm comm) {
     return my_bcomm;
 }
 
-int msg_make(void* buf_inout, int origin) {
-    char tmp[MSG_SIZE_MAX] = { 0 };
-
-    memcpy(tmp, &origin, sizeof(int));
-    memcpy(tmp + sizeof(int), buf_inout, MSG_SIZE_MAX - sizeof(int));
-    memcpy(buf_inout, &tmp, MSG_SIZE_MAX);
-    return 0;
-}
-
 int msg_get_num(void* buf_in) {
     return *((int*) buf_in);
 }
@@ -340,12 +331,15 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
 // Used by broadcaster rank, send to send_list
 int bcast(bcomm* my_bcomm, void* send_buf, int send_size) {
     MPI_Status isend_stat[my_bcomm->send_list_len];
+    char tmp[send_size];
 
-    msg_make(send_buf, my_bcomm->my_rank);
+    /* Compose message to send */
+    memcpy(tmp, &my_bcomm->my_rank, sizeof(int));
+    memcpy(tmp + sizeof(int), send_buf, MSG_SIZE_MAX - sizeof(int));
 
     /* Send to all receivers, further away first */
     for (int i = my_bcomm->send_list_len - 1; i >= 0; i--)
-        MPI_Isend(send_buf, send_size, MPI_CHAR, my_bcomm->send_list[i], BCAST, my_bcomm->my_comm,
+        MPI_Isend(tmp, send_size, MPI_CHAR, my_bcomm->send_list[i], BCAST, my_bcomm->my_comm,
                 &my_bcomm->isend_reqs[i]);
     MPI_Waitall(my_bcomm->send_list_len, my_bcomm->isend_reqs, isend_stat);
 
