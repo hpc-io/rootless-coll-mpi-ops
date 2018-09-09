@@ -33,9 +33,9 @@ typedef struct BCastCommunicator {
     int send_list_len;                  /* # of outgoing ranks to send to */
     int* send_list;                     /* Array of outgoing ranks to send to */
     void *send_buf;                     /* Buffer for sending messages */
-    int send_cnt;                       /* # of outstanding non-blocking sends */
-    MPI_Request* isend_reqs;            /* Array for non-blocking send requests */
-    MPI_Status* isend_stats;            /* Array for non-blocking send statuses */
+    int fwd_send_cnt;                   /* # of outstanding non-blocking forwarding sends */
+    MPI_Request* fwd_isend_reqs;        /* Array for non-blocking forwarding send requests */
+    MPI_Status* fwd_isend_stats;        /* Array for non-blocking forwarding send statuses */
     int bcast_send_cnt;                 /* # of outstanding non-blocking broadcast sends */
     MPI_Request* bcast_isend_reqs;      /* Array for non-blocking broadcast send requests */
     MPI_Status* bcast_isend_stats;      /* Array for non-blocking broadcast send statuses */
@@ -212,9 +212,9 @@ bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max) {
                 my_bcomm->send_list[i] = send_dest;
         }
     }
-    my_bcomm->send_cnt = 0;
-    my_bcomm->isend_reqs = malloc(my_bcomm->send_list_len * sizeof(MPI_Request));
-    my_bcomm->isend_stats = malloc(my_bcomm->send_list_len * sizeof(MPI_Status));
+    my_bcomm->fwd_send_cnt = 0;
+    my_bcomm->fwd_isend_reqs = malloc(my_bcomm->send_list_len * sizeof(MPI_Request));
+    my_bcomm->fwd_isend_stats = malloc(my_bcomm->send_list_len * sizeof(MPI_Status));
     my_bcomm->bcast_send_cnt = 0;
     my_bcomm->bcast_isend_reqs = malloc(my_bcomm->send_list_len * sizeof(MPI_Request));
     my_bcomm->bcast_isend_stats = malloc(my_bcomm->send_list_len * sizeof(MPI_Status));
@@ -290,15 +290,15 @@ int recv_forward(bcomm* my_bcomm, char** recv_buf_out) {
             send_cnt = 0;
             if (status.MPI_SOURCE > my_bcomm->last_wall) {
                 /* If there are outstanding messages being forwarded, wait for them now */
-                if(my_bcomm->send_cnt > 0) {
-                    MPI_Waitall(my_bcomm->send_cnt, my_bcomm->isend_reqs, my_bcomm->isend_stats);
-                    my_bcomm->send_cnt = 0;
+                if(my_bcomm->fwd_send_cnt > 0) {
+                    MPI_Waitall(my_bcomm->fwd_send_cnt, my_bcomm->fwd_isend_reqs, my_bcomm->fwd_isend_stats);
+                    my_bcomm->fwd_send_cnt = 0;
                 } /* end if */
 
                 /* Send messages, to further ranks first */
                 for (int j = my_bcomm->send_channel_cnt; j >= 0; j--) {
                     MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
-                            &(my_bcomm->isend_reqs[send_cnt]));
+                            &(my_bcomm->fwd_isend_reqs[send_cnt]));
                     send_cnt++;
                 }
             } /* end if */
@@ -310,16 +310,16 @@ int recv_forward(bcomm* my_bcomm, char** recv_buf_out) {
                 /* Avoid situation where world_size - 1 rank in non-power of 2 world_size shouldn't forward */
                 if(upper_bound >= 0) {
                     /* If there are outstanding messages being forwarded, wait for them now */
-                    if(my_bcomm->send_cnt > 0) {
-                        MPI_Waitall(my_bcomm->send_cnt, my_bcomm->isend_reqs, my_bcomm->isend_stats);
-                        my_bcomm->send_cnt = 0;
+                    if(my_bcomm->fwd_send_cnt > 0) {
+                        MPI_Waitall(my_bcomm->fwd_send_cnt, my_bcomm->fwd_isend_reqs, my_bcomm->fwd_isend_stats);
+                        my_bcomm->fwd_send_cnt = 0;
                     } /* end if */
 
                     /* Send messages, to further ranks first */
                     for (int j = upper_bound; j >= 0; j--) {
                         if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
                             MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
-                                    &(my_bcomm->isend_reqs[send_cnt]));
+                                    &(my_bcomm->fwd_isend_reqs[send_cnt]));
                             send_cnt++;
                         }
                     }
@@ -327,7 +327,7 @@ int recv_forward(bcomm* my_bcomm, char** recv_buf_out) {
             } /* end else */
 
             /* Update # of outstanding messages being sent for bcomm */
-            my_bcomm->send_cnt = send_cnt;
+            my_bcomm->fwd_send_cnt = send_cnt;
         } /* end if */
 
         /* Return pointer to user data in current receive buffer */
@@ -394,9 +394,9 @@ int bcomm_teardown(bcomm* my_bcomm) {
         recv_forward(my_bcomm, &recv_buf);
 
     /* If there are outstanding messages being forwarded, wait for them now */
-    if(my_bcomm->send_cnt > 0) {
-        MPI_Waitall(my_bcomm->send_cnt, my_bcomm->isend_reqs, my_bcomm->isend_stats);
-        my_bcomm->send_cnt = 0;
+    if(my_bcomm->fwd_send_cnt > 0) {
+        MPI_Waitall(my_bcomm->fwd_send_cnt, my_bcomm->fwd_isend_reqs, my_bcomm->fwd_isend_stats);
+        my_bcomm->fwd_send_cnt = 0;
     } /* end if */
 
     /* Retrieve the # of broadcasts we've received */
@@ -407,8 +407,8 @@ int bcomm_teardown(bcomm* my_bcomm) {
 
     /* Release resources */
     MPI_Comm_free(&my_bcomm->my_comm);
-    free(my_bcomm->isend_reqs);
-    free(my_bcomm->isend_stats);
+    free(my_bcomm->fwd_isend_reqs);
+    free(my_bcomm->fwd_isend_stats);
     free(my_bcomm->bcast_isend_reqs);
     free(my_bcomm->bcast_isend_stats);
     free(my_bcomm->recv_buf[0]);
