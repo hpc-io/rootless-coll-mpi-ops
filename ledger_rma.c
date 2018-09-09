@@ -212,11 +212,11 @@ bcomm *bcomm_init(MPI_Comm comm) {
     return my_bcomm;
 }
 
-int msg_make(void* buf_inout, int origin, int sn) {
+int msg_make(void* buf_inout, int origin) {
     char tmp[MSG_SIZE_MAX] = { 0 };
+
     memcpy(tmp, &origin, sizeof(int));
-    memcpy(tmp + sizeof(int), &sn, sizeof(int));
-    memcpy(tmp + 2 * sizeof(int), buf_inout, MSG_SIZE_MAX - 2 * sizeof(int));
+    memcpy(tmp + sizeof(int), buf_inout, MSG_SIZE_MAX - sizeof(int));
     memcpy(buf_inout, &tmp, MSG_SIZE_MAX);
     return 0;
 }
@@ -338,12 +338,13 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
 }
 
 // Used by broadcaster rank, send to send_list
-int bcast(bcomm* my_bcomm, void* send_buf, int sn, int send_size) {
+int bcast(bcomm* my_bcomm, void* send_buf, int send_size) {
     MPI_Status isend_stat[my_bcomm->send_list_len];
 
-    msg_make(send_buf, my_bcomm->my_rank, sn);
+    msg_make(send_buf, my_bcomm->my_rank);
 
-    for (int i = 0; i < my_bcomm->send_list_len; i++)
+    /* Send to all receivers, further away first */
+    for (int i = my_bcomm->send_list_len - 1; i >= 0; i--)
         MPI_Isend(send_buf, send_size, MPI_CHAR, my_bcomm->send_list[i], BCAST, my_bcomm->my_comm,
                 &my_bcomm->isend_reqs[i]);
     MPI_Waitall(my_bcomm->send_list_len, my_bcomm->isend_reqs, isend_stat);
@@ -405,9 +406,7 @@ int random_rank(int my_rank, int world_size) {
 
 int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     char recv_buf[MSG_SIZE_MAX] = { '\0' };
-    int next_rank;
     char next_rank_str[MSG_SIZE_MAX];
-    int sn = 0;
     unsigned long time_start;
     unsigned long time_end;
     unsigned long phase_1;
@@ -415,26 +414,22 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     int recv_msg_cnt;
     int my_rank;
 
-    next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
-    snprintf(next_rank_str, 10, "%d", next_rank);
+    *(int *)next_rank_str = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
 
     time_start = get_time_usec();
 
-    bcast(my_bcomm, next_rank_str, sn, MSG_SIZE_MAX);
+    bcast(my_bcomm, next_rank_str, MSG_SIZE_MAX);
     bcast_cnt = 1;
 
     while (bcast_cnt < cnt) {
         if (recv_forward(my_bcomm, recv_buf) == 0) {
-            int recv_rank = atoi(recv_buf + sizeof(int));
+            int recv_rank = *(int *)recv_buf;
 
             if (recv_rank == my_bcomm->my_rank) {
-                int next_rank;
+                *(int *)next_rank_str = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
 
+                bcast(my_bcomm, next_rank_str, MSG_SIZE_MAX);
                 bcast_cnt++;
-                next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
-                snprintf(next_rank_str, 10, "%d", next_rank);
-                sn++;
-                bcast(my_bcomm, next_rank_str, sn, MSG_SIZE_MAX);
             }
         }
     }
