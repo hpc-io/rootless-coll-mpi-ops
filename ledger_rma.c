@@ -328,48 +328,43 @@ int bcast(bcomm* my_bcomm, void* send_buf, int sn, int send_size) {
     return 0;
 }
 
-char result_buf[2 * 1024] = { '\0' };
-
 int bcomm_teardown(bcomm* my_bcomm) {
     int total_bcast = 0;
     MPI_Request req;
     MPI_Status stat;
+    int done;
+    char recv_buf[MSG_SIZE_MAX];
+    int recv_cnt;
+
+    /* Retrieve the # of broadcasts from all ranks */
     MPI_Iallreduce(&(my_bcomm->my_bcast_cnt), &total_bcast, 1, MPI_INT, MPI_SUM, my_bcomm->my_comm, &req);
 
-    int done = 0;
-    char recv_buf[MSG_SIZE_MAX];
+    /* Forward messages until all ranks have participated in allreduce for total braoadcast count */
     do {
         MPI_Test(&req, &done, &stat);
-        if (!done) {
-            if (recv_forward(my_bcomm, recv_buf) == 0) {
-//                int recv_rank = atoi(recv_buf + sizeof(int));
-//                char origin_rank[16] = {'\0'};
-//                sprintf(origin_rank, "%d", (recv_rank + 1)%my_bcomm->world_size);
-//                strcat(result_buf, origin_rank);//ranks
-//                strcat(result_buf, ",");
-            }
-        }
+        if (!done)
+            recv_forward(my_bcomm, recv_buf);
     } while (!done);
 
-    while (my_bcomm->bcast_recv_cnt + my_bcomm->my_bcast_cnt < total_bcast) {
-        if (recv_forward(my_bcomm, recv_buf) == 0) {
-//            int recv_rank = atoi(recv_buf + sizeof(int));
-//            char origin_rank[16] = {'\0'};
-//            sprintf(origin_rank, "%d", (recv_rank + 1)%my_bcomm->world_size);
-//            strcat(result_buf, origin_rank);//ranks
-//            strcat(result_buf, ",");
-        }
-    }
+    /* Forward messages until we've received all the broadcasts */
+    while (my_bcomm->bcast_recv_cnt + my_bcomm->my_bcast_cnt < total_bcast)
+        recv_forward(my_bcomm, recv_buf);
 
-    int recv_cnt = my_bcomm->bcast_recv_cnt;
+    /* Retrieve the # of broadcasts we've received */
+    recv_cnt = my_bcomm->bcast_recv_cnt;
+
+    /* Shut down skip ring */
     MPI_Cancel(&my_bcomm->irecv_req);
-
+    free(my_bcomm->isend_reqs);
+    free(my_bcomm->recv_buf);
+    free(my_bcomm->send_list);
     free(my_bcomm);
+
     return recv_cnt;
 }
 
 int prev_rank(int my_rank, int world_size) {
-    return (my_rank - 1) % world_size;
+    return (my_rank + (world_size - 1)) % world_size;
 }
 
 int random_rank(int my_rank, int world_size) {
