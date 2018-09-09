@@ -14,29 +14,27 @@ enum COM_TAGS {
 };
 
 typedef struct BCastCommunicator {
-    MPI_Comm my_comm;
-    int my_rank;
-    int send_channel_cnt; //my_level
-    int world_size;
-    int msg_life_max;
-    int is_bidirectional;
-    //int* send_list_left;
-    int* send_list;
-    //int send_list_left_len;
-    int send_list_len;
-    int* recv_list;
-    //int* recv_list_right;
-    int recv_list_len;
-    //int recv_list_right_len;
+    /* MPI fields */
+    MPI_Comm my_comm;                   /* MPI communicator to use */
+    int my_rank;                        /* Local rank value */
+    int world_size;                     /* # of ranks in communicator */
 
-    int last_recv_it;
-    MPI_Request irecv_req;
-    MPI_Request* isend_reqs;
-    char* recv_buf;
+    /* Skip ring fields */
+    int my_level;                       /* Level of rank in ring */
+
+    /* Send fields */
+    int send_channel_cnt;               /* # of outgoing channels from this rank */
+    int* send_list;                     /* Array of outgoing ranks to send to */
+    int send_list_len;
+    MPI_Request* isend_reqs;            /* Array for send requests */
+
+    /* Receive fields */
+    MPI_Request irecv_req;              /* Request for incoming messages */
+    char* recv_buf;                     /* Buffer for incoming messages */
+    
+    /* Operation counters */
     int my_bcast_cnt;
     int bcast_recv_cnt;
-//char** recv_buf;//2D array
-
 } bcomm;
 
 char DEBUG_MODE = 'O';
@@ -147,35 +145,35 @@ int tallest_rank(int world_size) {
     return 0;
 }
 
-int bcomm_init(bcomm* my_bcomm, MPI_Comm comm) {
-    my_bcomm->my_comm = comm;
+bcomm *bcomm_init(MPI_Comm comm) {
+    bcomm* my_bcomm;
+
+    /* Allocate struct */
+    my_bcomm = malloc(sizeof(bcomm));
+
+    /* Copy communicator and gather stats about it */
+    MPI_Comm_dup(comm, &my_bcomm->my_comm);
     MPI_Comm_size(my_bcomm->my_comm, &my_bcomm->world_size);
     if (my_bcomm->world_size < 2) {
         printf("Too few ranks, program ended. world_size = %d\n", my_bcomm->world_size);
-        return -1;
+        return NULL;
     }
+    MPI_Comm_rank(my_bcomm->my_comm, &my_bcomm->my_rank);
+
+    /* Set operation counters */
     my_bcomm->my_bcast_cnt = 0;
     my_bcomm->bcast_recv_cnt = 0;
-    MPI_Comm_rank(my_bcomm->my_comm, &my_bcomm->my_rank);
-    my_bcomm->send_channel_cnt = get_level(my_bcomm->world_size, my_bcomm->my_rank);
 
-    my_bcomm->msg_life_max = (int) log2(my_bcomm->world_size) + 1;
-
-    int is_power2 = is_powerof2(my_bcomm->world_size);
-
-    if (is_power2) { //OK
-        my_bcomm->send_list_len = my_bcomm->send_channel_cnt + 1;
-        my_bcomm->send_list = malloc(my_bcomm->send_list_len * sizeof(int));
-
-        for (int i = 0; i < my_bcomm->send_list_len; i++) {
+    /* Set up send fields */
+    my_bcomm->my_level = my_bcomm->send_channel_cnt = get_level(my_bcomm->world_size, my_bcomm->my_rank);
+    my_bcomm->send_list_len = my_bcomm->send_channel_cnt + 1;
+    my_bcomm->send_list = malloc(my_bcomm->send_list_len * sizeof(int));
+    if (is_powerof2(my_bcomm->world_size)) {
+        for (int i = 0; i < my_bcomm->send_list_len; i++)
             my_bcomm->send_list[i] = (int) (my_bcomm->my_rank + pow(2, i)) % my_bcomm->world_size;
-        }
-    } else { // non 2^n world size
-        my_bcomm->send_list_len = my_bcomm->send_channel_cnt + 1;
-
-        my_bcomm->send_list = malloc(my_bcomm->send_list_len * sizeof(int));
-
-        for (int i = 0; i <= my_bcomm->send_channel_cnt; i++) {
+    } 
+    else { // non 2^n world size
+        for (int i = 0; i < my_bcomm->send_list_len; i++) {
             int send_dest = (int) (my_bcomm->my_rank + pow(2, i));
 
             /* Check for sending to ranks beyond the end of the world size */
@@ -189,21 +187,23 @@ int bcomm_init(bcomm* my_bcomm, MPI_Comm comm) {
                     my_bcomm->send_list[i] = 0;
                 } /* end else */
 
+                /* Reset # of valid destinations in array */
                 my_bcomm->send_list_len = my_bcomm->send_channel_cnt + 1;
-            } /* end if */
-            else {
-                my_bcomm->send_list[i] = send_dest;
-            }
 
+                /* Break out of loop now, we're finished with the destinations to send to */
+                break;
+            } /* end if */
+            else
+                my_bcomm->send_list[i] = send_dest;
         }
     }
-
-    my_bcomm->recv_buf = (char*) malloc(MSG_SIZE_MAX * sizeof(char));
     my_bcomm->isend_reqs = malloc(my_bcomm->send_list_len * sizeof(MPI_Request));
 
+    /* Set up receive fields */
+    my_bcomm->recv_buf = (char*) malloc(MSG_SIZE_MAX * sizeof(char));
     MPI_Irecv(my_bcomm->recv_buf, MSG_SIZE_MAX, MPI_CHAR, MPI_ANY_SOURCE, 0, my_bcomm->my_comm, &(my_bcomm->irecv_req)); //MPI_ANY_TAG
 
-    return 0;
+    return my_bcomm;
 }
 
 int msg_make(void* buf_inout, int origin, int sn) {
@@ -282,9 +282,8 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
 
         int send_cnt = 0;
         int upper_bound = 0;
-        int tmp_my_level = get_level(my_bcomm->world_size, my_bcomm->my_rank);
 
-        if (recv_level <= tmp_my_level) { // my_bcomm->my_level; new msg, send to all channels//|| my_bcomm->my_rank != my_bcomm->world_size - 1
+        if (recv_level <= my_bcomm->my_level) { // my_bcomm->my_level; new msg, send to all channels//|| my_bcomm->my_rank != my_bcomm->world_size - 1
             upper_bound = my_bcomm->send_channel_cnt;
         } else {
             upper_bound = my_bcomm->send_channel_cnt - 1; // not send to same level
@@ -315,16 +314,17 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
 
 // Used by broadcaster rank, send to send_list
 int bcast(bcomm* my_bcomm, void* send_buf, int sn, int send_size) {
+    MPI_Status isend_stat[my_bcomm->send_list_len];
+
     msg_make(send_buf, my_bcomm->my_rank, sn);
 
-    for (int i = 0; i < my_bcomm->send_list_len; i++) {
-        MPI_Isend(send_buf, send_size, MPI_CHAR, my_bcomm->send_list[i], BCAST, MPI_COMM_WORLD,
+    for (int i = 0; i < my_bcomm->send_list_len; i++)
+        MPI_Isend(send_buf, send_size, MPI_CHAR, my_bcomm->send_list[i], BCAST, my_bcomm->my_comm,
                 &my_bcomm->isend_reqs[i]);
-    }
+    MPI_Waitall(my_bcomm->send_list_len, my_bcomm->isend_reqs, isend_stat);
 
     my_bcomm->my_bcast_cnt++;
-    MPI_Status isend_stat[my_bcomm->send_list_len];
-    MPI_Waitall(my_bcomm->send_list_len, my_bcomm->isend_reqs, isend_stat);
+
     return 0;
 }
 
@@ -355,6 +355,7 @@ int bcomm_teardown(bcomm* my_bcomm) {
 
     /* Shut down skip ring */
     MPI_Cancel(&my_bcomm->irecv_req);
+    MPI_Comm_free(&my_bcomm->my_comm);
     free(my_bcomm->isend_reqs);
     free(my_bcomm->recv_buf);
     free(my_bcomm->send_list);
@@ -436,8 +437,7 @@ int main(int argc, char** argv) {
 
     MPI_Init(NULL, NULL);
 
-    my_comm = malloc(sizeof(bcomm));
-    if(bcomm_init(my_comm, MPI_COMM_WORLD) != 0)
+    if(NULL == (my_comm = bcomm_init(MPI_COMM_WORLD)))
         return 0;
 
     game_cnt = atoi(argv[2]);
