@@ -22,7 +22,6 @@ typedef struct BCastCommunicator {
     /* Message fields */
     size_t msg_size_max;                /* Maximum message size */
     void *user_send_buf;                /* Buffer for user to send messages in */
-    void *user_recv_buf;                /* Buffer for user to receive messages in */
 
     /* Skip ring fields */
     int my_level;                       /* Level of rank in ring */
@@ -38,7 +37,8 @@ typedef struct BCastCommunicator {
 
     /* Receive fields */
     MPI_Request irecv_req;              /* Request for incoming messages */
-    char* recv_buf;                     /* Buffer for incoming messages */
+    unsigned curr_recv_buf;             /* Current buffer for receive */
+    char* recv_buf[2];                  /* Buffers for incoming messages */
     
     /* Operation counters */
     int my_bcast_cnt;
@@ -218,10 +218,12 @@ bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max) {
     my_bcomm->user_send_buf = ((char *)my_bcomm->send_buf) + sizeof(int);
 
     /* Set up receive fields */
-    my_bcomm->recv_buf = (char*) malloc(sizeof(int) + msg_size_max);
+    my_bcomm->recv_buf[0] = (char*) malloc(sizeof(int) + msg_size_max);
+    my_bcomm->recv_buf[1] = (char*) malloc(sizeof(int) + msg_size_max);
+    my_bcomm->curr_recv_buf = 0;
 
     /* Post initial receive for this rank */
-    MPI_Irecv(my_bcomm->recv_buf, msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, BCAST, my_bcomm->my_comm, &(my_bcomm->irecv_req));
+    MPI_Irecv(my_bcomm->recv_buf[0], msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, BCAST, my_bcomm->my_comm, &(my_bcomm->irecv_req));
 
     return my_bcomm;
 }
@@ -275,18 +277,20 @@ int check_passed_origin(bcomm* my_bcomm, int origin_rank, int to_rank) {
 }
 
 // Used by all ranks
-int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
+int recv_forward(bcomm* my_bcomm, char** recv_buf_out) {
     MPI_Status status;
     int completed = 0;
 
     /* Check if we've received any messages */
     MPI_Test(&my_bcomm->irecv_req, &completed, &status);
     if (completed) {
+        void *recv_buf;
+
         /* Increment # of messages received */
         my_bcomm->bcast_recv_cnt++;
 
-        /* Copy received message */
-        memcpy(recv_buf_out, my_bcomm->recv_buf + sizeof(int), my_bcomm->msg_size_max - sizeof(int));
+        /* Set buffer that message was received in */
+        recv_buf = my_bcomm->recv_buf[my_bcomm->curr_recv_buf];
 
         /* Check for a rank that can forward messages */
         if(my_bcomm->my_level > 0) {
@@ -294,14 +298,14 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
             int send_cnt;
 
             /* Retrieve message's origin rank */
-            origin = msg_get_num(my_bcomm->recv_buf);
+            origin = msg_get_num(recv_buf);
 
             /* Determine which ranks to send to */
             send_cnt = 0;
             if (status.MPI_SOURCE > my_bcomm->last_wall) {
                 /* Send messages, to further ranks first */
                 for (int j = my_bcomm->send_channel_cnt; j >= 0; j--) {
-                    MPI_Isend(my_bcomm->recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
+                    MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
                             &(my_bcomm->isend_reqs[send_cnt]));
                     send_cnt++;
                 }
@@ -316,7 +320,7 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
                     /* Send messages, to further ranks first */
                     for (int j = upper_bound; j >= 0; j--) {
                         if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
-                            MPI_Isend(my_bcomm->recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
+                            MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j], BCAST, my_bcomm->my_comm,
                                     &(my_bcomm->isend_reqs[send_cnt]));
                             send_cnt++;
                         }
@@ -332,8 +336,12 @@ int recv_forward(bcomm* my_bcomm, char* recv_buf_out) {
             } /* end if */
         } /* end if */
 
-        /* Re-post receive, for next message */
-        MPI_Irecv(my_bcomm->recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, BCAST, my_bcomm->my_comm,
+        /* Return pointer to user data in current receive buffer */
+        *recv_buf_out = ((char *)recv_buf) + sizeof(int);
+
+        /* Switch to other receive buffer and re-post receive, for next message */
+        my_bcomm->curr_recv_buf = !my_bcomm->curr_recv_buf;
+        MPI_Irecv(my_bcomm->recv_buf[my_bcomm->curr_recv_buf], my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, BCAST, my_bcomm->my_comm,
                 &my_bcomm->irecv_req);
 
         return 0;
@@ -362,7 +370,7 @@ int bcomm_teardown(bcomm* my_bcomm) {
     MPI_Request req;
     MPI_Status stat;
     int done;
-    char recv_buf[MSG_SIZE_MAX];
+    char *recv_buf;
     int recv_cnt;
 
     /* Retrieve the # of broadcasts from all ranks */
@@ -372,12 +380,12 @@ int bcomm_teardown(bcomm* my_bcomm) {
     do {
         MPI_Test(&req, &done, &stat);
         if (!done)
-            recv_forward(my_bcomm, recv_buf);
+            recv_forward(my_bcomm, &recv_buf);
     } while (!done);
 
     /* Forward messages until we've received all the broadcasts */
     while (my_bcomm->bcast_recv_cnt + my_bcomm->my_bcast_cnt < total_bcast)
-        recv_forward(my_bcomm, recv_buf);
+        recv_forward(my_bcomm, &recv_buf);
 
     /* Retrieve the # of broadcasts we've received */
     recv_cnt = my_bcomm->bcast_recv_cnt;
@@ -386,7 +394,8 @@ int bcomm_teardown(bcomm* my_bcomm) {
     MPI_Cancel(&my_bcomm->irecv_req);
     MPI_Comm_free(&my_bcomm->my_comm);
     free(my_bcomm->isend_reqs);
-    free(my_bcomm->recv_buf);
+    free(my_bcomm->recv_buf[0]);
+    free(my_bcomm->recv_buf[1]);
     free(my_bcomm->send_buf);
     free(my_bcomm->send_list);
     free(my_bcomm);
@@ -409,7 +418,6 @@ int random_rank(int my_rank, int world_size) {
 }
 
 int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
-    char recv_buf[MSG_SIZE_MAX] = { '\0' };
     char *next_rank_str;
     unsigned long time_start;
     unsigned long time_end;
@@ -431,7 +439,10 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     bcast_cnt = 1;
 
     while (bcast_cnt < cnt) {
-        if (recv_forward(my_bcomm, recv_buf) == 0) {
+        char *recv_buf;
+
+        /* Retrieve a message (in internal bcomm buffer) */
+        if (recv_forward(my_bcomm, &recv_buf) == 0) {
             int recv_rank = *(int *)recv_buf;
 
             if (recv_rank == my_bcomm->my_rank) {
