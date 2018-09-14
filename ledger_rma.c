@@ -138,7 +138,7 @@ int get_level(int world_size, int rank) {
     return l;
 }
 
-//This returns the closest rank that has higher level than rank 
+/* This returns the closest rank that has higher level than rank */
 int last_wall(int rank) {
     unsigned last_wall = rank;
 
@@ -443,7 +443,7 @@ int random_rank(int my_rank, int world_size) {
     return next_rank;
 }
 
-int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
+int hacky_sack(int cnt, bcomm* my_bcomm) {
     char *next_rank;
     unsigned long time_start;
     unsigned long time_end;
@@ -504,20 +504,32 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
 int main(int argc, char** argv) {
     bcomm* my_comm;
     int game_cnt;
-    int init_rank;
+    int bcast_type;
     time_t t;
 
     srand((unsigned) time(&t) + getpid());
 
-    MPI_Init(NULL, NULL);
-
-    if(NULL == (my_comm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX)))
-        return 0;
+    MPI_Init(&argc, &argv);
 
     game_cnt = atoi(argv[2]);
-    init_rank = atoi(argv[1]);
+    bcast_type = atoi(argv[1]);
 
-    hacky_sack(game_cnt, init_rank, my_comm);
+    /* Rootless broadcast */
+    if(bcast_type == 1) {
+        if(NULL == (my_comm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX)))
+            return 0;
+
+        hacky_sack(game_cnt, my_comm);
+    } /* end if */
+    else if(bcast_type == 2) {
+        if(NULL == (my_comm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX)))
+            return 0;
+
+        hacky_sack(game_cnt, my_comm);
+    } /* end if */
+    else {
+        printf("Unknown bcast type\n");
+    } /* end else */
 
     MPI_Finalize();
 
