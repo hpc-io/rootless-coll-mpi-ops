@@ -620,7 +620,11 @@ int bcomm_teardown(bcomm* my_bcomm) {
 
 // A toy comparitor
 int agree_proposal(char* prop_1, char* prop_2){
-    return 1;
+    int ret = strcmp(prop_1, prop_2);
+    if(ret == 0)
+        return 1;
+    else
+        return 0;
     //    if(prop_1[0] == prop_2[0])
 //        return 1;
 //    else
@@ -692,7 +696,7 @@ int test_IAllReduce(bcomm* my_bcomm, int starter) {
     } else {
         usleep(1500);
         if (my_bcomm->my_rank % 2 == 0) {
-            my_bcomm->my_proposal = "111";
+            my_bcomm->my_proposal = "000";
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
         } else {
             my_bcomm->my_proposal = "111";
