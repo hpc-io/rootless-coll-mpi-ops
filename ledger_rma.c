@@ -664,7 +664,7 @@ int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
         if(ret == 3 || ret == 2 || ret == 1){//received all votes
             recv_vote_cnt++;
             votes_result &= my_bcomm->my_vote;
-            printf("%s:%u - rank = %03d, received vote, recv_vote_cnt = %d, waiting for %d\n", __func__, __LINE__, my_bcomm->my_rank, recv_vote_cnt, my_bcomm->send_channel_cnt);
+            printf("%s:%u - rank = %03d, received vote, recv_vote_cnt = %d, waiting for %d\n", __func__, __LINE__, my_bcomm->my_rank, recv_vote_cnt, my_bcomm->send_list_len);
         }
         if ( ret== 0) {
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
