@@ -5,7 +5,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/time.h>
-
+#include <stdbool.h>
 #include <pthread.h>
 
 #define MSG_SIZE_MAX 512
@@ -19,6 +19,19 @@ enum COM_TAGS {
 typedef int SN;
 typedef int Vote;
 
+typedef enum REQ_STATUS {
+    COMPLETED,
+    IN_PROGRESS,
+    FAILED
+}REQ_STATUS;
+
+typedef struct bcomm_token_t {
+    SN req_id;
+    REQ_STATUS req_stat;
+    bool completed;
+    bool vote_result;
+    struct bcomm_token_t* next;
+} bcomm_token_t;
 
 typedef struct BCastCommunicator {
     /* MPI fields */
@@ -64,6 +77,8 @@ typedef struct BCastCommunicator {
     /* Operation counters */
     int my_bcast_cnt;
     int bcast_recv_cnt;
+    /* Request progress status*/
+    bcomm_token_t* req_stat;
 } bcomm;
 
 char DEBUG_MODE = 'O';
@@ -140,7 +155,7 @@ SN make_sn(bcomm* my_bcomm){
     return (SN) my_bcomm->my_rank;
 }
 
-int agree_proposal(char* prop_1, char* prop_2);
+int agree_proposal(char* p1, char* p2);
 
 unsigned long get_time_usec() {
     struct timeval tv;
@@ -379,6 +394,246 @@ int bufer_maintain_irecv(bcomm* my_bcomm) {
     return -1;
 }
 
+int _IAR_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
+    if(status.MPI_TAG == IAR_VOTE){//collect vote and up stream
+        if(recv_buf_out)// not NULL
+            *recv_buf_out = (char *) my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index];
+        //printf("%s:%u - rank = %03d, received a vote.\n", __func__, __LINE__, my_bcomm->my_rank);
+        my_bcomm->recv_vote_cnt ++;
+        //printf("%s:%u - rank = %03d, received vote from rank %d, recv_vote_cnt = %d, expected total is %d\n", __func__, __LINE__, my_bcomm->my_rank, status.MPI_SOURCE, my_bcomm->recv_vote_cnt, my_bcomm->send_list_len);
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        PBuf* vote_buf = malloc(sizeof(PBuf));
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+
+        pbuf_deserialize(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index], vote_buf);// + sizeof(int). IAR_VOTE doesn't need origin
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        //my_bcomm->my_vote &= *(Vote*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int) + sizeof(SN));//get received vote
+        my_bcomm->my_vote &= *(Vote*)(vote_buf->data);//*(Vote*)(vote_buf->data)
+        //printf("%s:%u - rank %03d received a vote: %d, now my vote = %d\n", __func__, __LINE__, my_bcomm->my_rank, *(Vote*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(SN)+ sizeof(unsigned int)), my_bcomm->my_vote);
+        if(my_bcomm->recv_vote_cnt == my_bcomm->proposal_sent_cnt){//all votes are received, report to predecessor
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+            //memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));
+            //*(my_bcomm->send_buf_my_vote + sizeof(SN)) = my_bcomm->my_vote; // vote NO
+
+            *(Vote*) (vote_buf->data) = my_bcomm->my_vote;
+            unsigned int send_len;
+            pbuf_serialize(vote_buf->sn, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
+            MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+
+            bufer_maintain_irecv(my_bcomm);
+            pbuf_free(vote_buf);
+
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+            return 3;//received all votes
+        }
+
+        bufer_maintain_irecv(my_bcomm);
+        pbuf_free(vote_buf);
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        return 2;//received a vote, but expecting more
+    }
+
+    if(status.MPI_TAG == IAR_PROPOSAL){// new proposal, down stream
+        if(recv_buf_out)// not NULL
+            *recv_buf_out = (char *)my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index]+ sizeof(int);
+
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        my_bcomm->recv_proposal_from = status.MPI_SOURCE;
+        my_bcomm->proposal_sent_cnt = 0;
+
+        PBuf* pbuf = malloc(sizeof(PBuf));
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        pbuf_deserialize(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), pbuf);
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        if (0 == agree_proposal(my_bcomm->my_proposal, pbuf->data)) {//local declined, up stream to predecessor
+            //printf("recv_forward: received proposal: sn = %d, proposal: %s\n", pbuf->sn, pbuf->data);
+            //printf("%s:%u - rank = %03d, proposal declined, reporting...\n", __func__, __LINE__, my_bcomm->my_rank);
+            //copy sn from send[0]
+            //memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));//copy sn
+            //set vote
+            my_bcomm->my_vote = 0;
+            unsigned int send_len;
+            pbuf_serialize(pbuf->sn, sizeof(Vote), (char*)&(my_bcomm->my_vote), my_bcomm->send_buf_my_vote, &send_len);
+
+            //*(my_bcomm->send_buf_my_vote + sizeof(SN)) = my_bcomm->my_vote; // vote NO
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+            MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);// sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+
+            bufer_maintain_irecv(my_bcomm);
+            pbuf_free(pbuf);
+            return 1;//proposal declined locally, reported
+        }else{//local approved
+            if(my_bcomm->send_channel_cnt == 0){//leaf rank vote yes
+                memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));//copy sn
+
+                my_bcomm->my_vote = 1;
+                unsigned int send_len;
+                pbuf_serialize(*(SN*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int)), sizeof(Vote), (char*)&(my_bcomm->my_vote), my_bcomm->send_buf_my_vote, &send_len);
+                //*(Vote*)(my_bcomm->send_buf_my_vote + sizeof(SN)) = my_bcomm->my_vote; // vote NO
+                MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+
+                bufer_maintain_irecv(my_bcomm);
+                pbuf_free(pbuf);
+                return 4;//leaf rank finished.
+            }
+        }
+
+        // else case: regular forward
+    }
+    //neither proposal nor vote
+    return 0;
+}
+
+int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        void *recv_buf;
+
+        /* Increment # of messages received */
+        my_bcomm->bcast_recv_cnt++;
+
+        /* Set buffer that message was received in */
+        recv_buf = my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index];
+
+        /* Check for a rank that can forward messages */
+        if(my_bcomm->my_level > 0) {
+            int origin;
+            int send_cnt;
+
+            /* Retrieve message's origin rank */
+            origin = msg_get_num(recv_buf);
+
+            /* Determine which ranks to send to */
+            send_cnt = 0;
+            if (status.MPI_SOURCE > my_bcomm->last_wall) {
+                /* Send messages, to further ranks first */
+                for (int j = my_bcomm->send_channel_cnt; j >= 0; j--) {
+                    MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j],  status.MPI_TAG, my_bcomm->my_comm,
+                            &(my_bcomm->fwd_isend_reqs[my_bcomm->curr_recv_buf_index][send_cnt]));
+                    send_cnt++;
+                }
+            } /* end if */
+            else {
+                int upper_bound;
+
+                upper_bound = my_bcomm->send_channel_cnt - 1; // not send to same level
+
+                /* Avoid situation where world_size - 1 rank in non-power of 2 world_size shouldn't forward */
+                if(upper_bound >= 0) {
+                    /* Send messages, to further ranks first */
+                    for (int j = upper_bound; j >= 0; j--) {
+                        if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
+                            MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j],  status.MPI_TAG, my_bcomm->my_comm,
+                                    &(my_bcomm->fwd_isend_reqs[my_bcomm->curr_recv_buf_index][send_cnt]));
+                            send_cnt++;
+                        }
+                    }
+                } /* end if */
+            } /* end else */
+
+            /* Update # of outstanding messages being sent for bcomm */
+            my_bcomm->fwd_send_cnt[my_bcomm->curr_recv_buf_index] = send_cnt;
+            if(my_bcomm->proposal_sent_cnt == 0)
+                my_bcomm->proposal_sent_cnt = send_cnt;
+        } /* end if */
+
+        /* Return pointer to user data in current receive buffer */
+        if(recv_buf_out)// not NULL
+            *recv_buf_out = ((char *)recv_buf) + sizeof(int);
+
+        bufer_maintain_irecv(my_bcomm);
+        return 0;
+    return 0;
+}
+int make_progress(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
+    // TODO:
+    // - setup token
+    // - handle proposal
+    // - handle vote
+    // - handle decision
+
+    int ret = _IAR_process(my_bcomm, status, recv_buf_out);
+    if(ret != 0)
+        return ret;
+
+    //BCAST and DECISION tags are treated the same.
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    _forward(my_bcomm, status, recv_buf_out);
+
+//        void *recv_buf;
+
+//        /* Increment # of messages received */
+//        my_bcomm->bcast_recv_cnt++;
+//
+//        /* Set buffer that message was received in */
+//        recv_buf = my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index];
+//
+//        /* Check for a rank that can forward messages */
+//        if(my_bcomm->my_level > 0) {
+//            int origin;
+//            int send_cnt;
+//
+//            /* Retrieve message's origin rank */
+//            origin = msg_get_num(recv_buf);
+//
+//            /* Determine which ranks to send to */
+//            send_cnt = 0;
+//            if (status.MPI_SOURCE > my_bcomm->last_wall) {
+//                /* Send messages, to further ranks first */
+//                for (int j = my_bcomm->send_channel_cnt; j >= 0; j--) {
+//                    MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j],  status.MPI_TAG, my_bcomm->my_comm,
+//                            &(my_bcomm->fwd_isend_reqs[my_bcomm->curr_recv_buf_index][send_cnt]));
+//                    send_cnt++;
+//                }
+//            } /* end if */
+//            else {
+//                int upper_bound;
+//
+//                upper_bound = my_bcomm->send_channel_cnt - 1; // not send to same level
+//
+//                /* Avoid situation where world_size - 1 rank in non-power of 2 world_size shouldn't forward */
+//                if(upper_bound >= 0) {
+//                    /* Send messages, to further ranks first */
+//                    for (int j = upper_bound; j >= 0; j--) {
+//                        if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
+//                            MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j],  status.MPI_TAG, my_bcomm->my_comm,
+//                                    &(my_bcomm->fwd_isend_reqs[my_bcomm->curr_recv_buf_index][send_cnt]));
+//                            send_cnt++;
+//                        }
+//                    }
+//                } /* end if */
+//            } /* end else */
+//
+//            /* Update # of outstanding messages being sent for bcomm */
+//            my_bcomm->fwd_send_cnt[my_bcomm->curr_recv_buf_index] = send_cnt;
+//            if(my_bcomm->proposal_sent_cnt == 0)
+//                my_bcomm->proposal_sent_cnt = send_cnt;
+//        } /* end if */
+
+        /* Return pointer to user data in current receive buffer */
+//        if(recv_buf_out)// not NULL
+//            *recv_buf_out = ((char *)recv_buf) + sizeof(int);
+//
+//        bufer_maintain_irecv(my_bcomm);
+        return 0;
+
+//    return -1;
+}
+
+int irecv(bcomm* my_bcomm, char** recv_buf_out, int* recved_tag_out){
+    MPI_Status status;
+    int completed = 0;
+    MPI_Test(&my_bcomm->irecv_req, &completed, &status);
+
+    if(completed){
+        if(recved_tag_out)
+            *recved_tag_out = status.MPI_TAG;
+        printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        return make_progress(my_bcomm, status, recv_buf_out);
+    }
+    return -1;
+}
+
 int recv_forward(bcomm* my_bcomm, char** recv_buf_out, int* recved_tag_out) {
     MPI_Status status;
     int completed = 0;
@@ -583,14 +838,17 @@ int bcomm_teardown(bcomm* my_bcomm) {
     /* Forward messages until all ranks have participated in allreduce for total braoadcast count */
     do {
         MPI_Test(&req, &done, &stat);
-        if (!done)
-            recv_forward(my_bcomm, &recv_buf, NULL);
+        if (!done){
+            //recv_forward(my_bcomm, &recv_buf, NULL);
+            irecv(my_bcomm, &recv_buf, NULL);
+        }
     } while (!done);
 
     /* Forward messages until we've received all the broadcasts */
-    while (my_bcomm->bcast_recv_cnt + my_bcomm->my_bcast_cnt < total_bcast)
-        recv_forward(my_bcomm, &recv_buf, NULL);
-
+    while (my_bcomm->bcast_recv_cnt + my_bcomm->my_bcast_cnt < total_bcast){
+        //recv_forward(my_bcomm, &recv_buf, NULL);
+        irecv(my_bcomm, &recv_buf, NULL);
+    }
     /* If there are outstanding messages being forwarded, wait for them now */
     if(my_bcomm->fwd_send_cnt[0] > 0) {
         MPI_Waitall(my_bcomm->fwd_send_cnt[0], my_bcomm->fwd_isend_reqs[0], my_bcomm->fwd_isend_stats[0]);
@@ -625,8 +883,8 @@ int bcomm_teardown(bcomm* my_bcomm) {
 }
 
 // A toy comparitor
-int agree_proposal(char* prop_1, char* prop_2){
-    int ret = strcmp(prop_1, prop_2);
+int agree_proposal(char* p1, char* p2){
+    int ret = strcmp(p1, p2);
     if(ret == 0)
         return 1;
     else
@@ -637,7 +895,10 @@ int agree_proposal(char* prop_1, char* prop_2){
 //        return 0;
 }
 
-
+//Make decision on which proposal will win, or both wins(compatible proposals)
+int judge_proposals(char* p1, char* p2){
+    return 1;
+}
 
 int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
@@ -656,10 +917,10 @@ int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
     Vote votes_result = 1;
     Vote recv_vote = 1;
     int ret = -1;
-    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     while (recv_vote_cnt < my_bcomm->send_list_len) { //use send_list_len ONLY on the started, other places use proposal_sent_cnt.
 
-        ret = recv_forward(my_bcomm, &recv_buf, &recved_tag);
+        ret = irecv(my_bcomm, &recv_buf, &recved_tag);
 
         if(ret == 3 || ret == 2 || ret == 1){//received all votes
             recv_vote_cnt++;
@@ -707,7 +968,7 @@ int test_IAllReduce(bcomm* my_bcomm, int starter) {
         int tag_recv = -1;
         int ret = -1;
         do {
-            ret = recv_forward(my_bcomm, &recv_buf, &tag_recv);
+            ret = irecv(my_bcomm, &recv_buf, &tag_recv);
             if(ret == -1){
                 continue;
             }
