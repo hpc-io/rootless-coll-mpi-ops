@@ -469,64 +469,66 @@ int _IAR_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
     return 0;
 }
 
-int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
+int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out) {
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-        void *recv_buf;
+    void *recv_buf;
 
-        /* Increment # of messages received */
-        my_bcomm->bcast_recv_cnt++;
+    /* Increment # of messages received */
+    my_bcomm->bcast_recv_cnt++;
 
-        /* Set buffer that message was received in */
-        recv_buf = my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index];
+    /* Set buffer that message was received in */
+    recv_buf = my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index];
 
-        /* Check for a rank that can forward messages */
-        if(my_bcomm->my_level > 0) {
-            int origin;
-            int send_cnt;
+    /* Check for a rank that can forward messages */
+    if (my_bcomm->my_level > 0) {
+        int origin;
+        int send_cnt;
 
-            /* Retrieve message's origin rank */
-            origin = msg_get_num(recv_buf);
+        /* Retrieve message's origin rank */
+        origin = msg_get_num(recv_buf);
 
-            /* Determine which ranks to send to */
-            send_cnt = 0;
-            if (status.MPI_SOURCE > my_bcomm->last_wall) {
+        /* Determine which ranks to send to */
+        send_cnt = 0;
+        if (status.MPI_SOURCE > my_bcomm->last_wall) {
+            /* Send messages, to further ranks first */
+            for (int j = my_bcomm->send_channel_cnt; j >= 0; j--) {
+                MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j],
+                        status.MPI_TAG, my_bcomm->my_comm,
+                        &(my_bcomm->fwd_isend_reqs[my_bcomm->curr_recv_buf_index][send_cnt]));
+                send_cnt++;
+            }
+        } /* end if */
+        else {
+            int upper_bound;
+
+            upper_bound = my_bcomm->send_channel_cnt - 1; // not send to same level
+
+            /* Avoid situation where world_size - 1 rank in non-power of 2 world_size shouldn't forward */
+            if (upper_bound >= 0) {
                 /* Send messages, to further ranks first */
-                for (int j = my_bcomm->send_channel_cnt; j >= 0; j--) {
-                    MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j],  status.MPI_TAG, my_bcomm->my_comm,
-                            &(my_bcomm->fwd_isend_reqs[my_bcomm->curr_recv_buf_index][send_cnt]));
-                    send_cnt++;
+                for (int j = upper_bound; j >= 0; j--) {
+                    if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
+                        MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j],
+                                status.MPI_TAG, my_bcomm->my_comm,
+                                &(my_bcomm->fwd_isend_reqs[my_bcomm->curr_recv_buf_index][send_cnt]));
+                        send_cnt++;
+                    }
                 }
             } /* end if */
-            else {
-                int upper_bound;
+        } /* end else */
 
-                upper_bound = my_bcomm->send_channel_cnt - 1; // not send to same level
+        /* Update # of outstanding messages being sent for bcomm */
+        my_bcomm->fwd_send_cnt[my_bcomm->curr_recv_buf_index] = send_cnt;
 
-                /* Avoid situation where world_size - 1 rank in non-power of 2 world_size shouldn't forward */
-                if(upper_bound >= 0) {
-                    /* Send messages, to further ranks first */
-                    for (int j = upper_bound; j >= 0; j--) {
-                        if (check_passed_origin(my_bcomm, origin, my_bcomm->send_list[j]) == 0) {
-                            MPI_Isend(recv_buf, my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, my_bcomm->send_list[j],  status.MPI_TAG, my_bcomm->my_comm,
-                                    &(my_bcomm->fwd_isend_reqs[my_bcomm->curr_recv_buf_index][send_cnt]));
-                            send_cnt++;
-                        }
-                    }
-                } /* end if */
-            } /* end else */
+        if (my_bcomm->proposal_sent_cnt == 0)
+            my_bcomm->proposal_sent_cnt = send_cnt;
+    } /* end if */
 
-            /* Update # of outstanding messages being sent for bcomm */
-            my_bcomm->fwd_send_cnt[my_bcomm->curr_recv_buf_index] = send_cnt;
-            if(my_bcomm->proposal_sent_cnt == 0)
-                my_bcomm->proposal_sent_cnt = send_cnt;
-        } /* end if */
+    /* Return pointer to user data in current receive buffer */
+    if (recv_buf_out) // not NULL
+        *recv_buf_out = ((char *) recv_buf) + sizeof(int);
 
-        /* Return pointer to user data in current receive buffer */
-        if(recv_buf_out)// not NULL
-            *recv_buf_out = ((char *)recv_buf) + sizeof(int);
-
-        bufer_maintain_irecv(my_bcomm);
-        return 0;
+    bufer_maintain_irecv(my_bcomm);
     return 0;
 }
 int make_progress(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
@@ -534,7 +536,7 @@ int make_progress(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
     if(ret != 0)
         return ret;
 
-    //BCAST and DECISION tags are treated the same.
+    //BCAST and DECISION tags are treated in the same way.
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     _forward(my_bcomm, status, recv_buf_out);
     return 0;
@@ -556,27 +558,20 @@ int irecv(bcomm* my_bcomm, char** recv_buf_out, int* recved_tag_out){
 
 // Used by broadcaster rank, send to send_list
 int bcast(bcomm* my_bcomm, enum COM_TAGS tag) {
-    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     /* If there are outstanding messages being broadcast, wait for them now */
     if(my_bcomm->bcast_send_cnt > 0) {
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
         MPI_Waitall(my_bcomm->bcast_send_cnt, my_bcomm->bcast_isend_reqs, my_bcomm->bcast_isend_stats);
         my_bcomm->bcast_send_cnt = 0;
-        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     } /* end if */
-    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     /* Send to all receivers, further away first */
     for (int i = my_bcomm->send_list_len - 1; i >= 0; i--){
         MPI_Isend(my_bcomm->send_buf, my_bcomm->msg_size_max, MPI_CHAR, my_bcomm->send_list[i], tag, my_bcomm->my_comm,
                 &my_bcomm->bcast_isend_reqs[i]);// my_bcomm->my_comm
-        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-        //MPI_Send(my_bcomm->send_buf, my_bcomm->msg_size_max, MPI_CHAR, my_bcomm->send_list[i], tag, my_bcomm->my_comm);
-        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     }
     /* Update # of outstanding messages being sent for bcomm */
     my_bcomm->bcast_send_cnt = my_bcomm->send_list_len;
     my_bcomm->my_bcast_cnt++;
-    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     return 0;
 }
 
