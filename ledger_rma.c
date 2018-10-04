@@ -395,7 +395,7 @@ int bufer_maintain_irecv(bcomm* my_bcomm) {
 }
 
 int _IAR_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
-    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
 
     if(status.MPI_TAG == IAR_VOTE){//collect vote and up stream
         if(recv_buf_out)// not NULL
@@ -453,52 +453,23 @@ int _IAR_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
             return 1;//proposal declined locally, reported
         }else{//local approved
             if(my_bcomm->send_channel_cnt != 0){//non leaf rank
-                if(check_passed_origin(my_bcomm, origin, my_bcomm->send_list[0]) != 0)//pass origin, this is a temperory leaf rank
-                    goto LEAF_RANK_VOTE;
-                else
-                    return 0;
+                if(check_passed_origin(my_bcomm, origin, my_bcomm->send_list[0]) == 0)//pass origin, this is a temperory leaf rank
+                    return 0;// return 0 will be caught by _forward();
             }
-            else {//leaf rank vote yes  ->send_channel_cnt
-LEAF_RANK_VOTE:
-                memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));//copy sn
-                printf("%s:%u - rank = %03d, leaf rank votes yes \n", __func__, __LINE__, my_bcomm->my_rank);
-                my_bcomm->my_vote = 1;
-                unsigned int send_len;
-                pbuf_serialize(*(SN*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int)), sizeof(Vote), (char*)&(my_bcomm->my_vote), my_bcomm->send_buf_my_vote, &send_len);
 
-                MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
-                printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-                bufer_maintain_irecv(my_bcomm);
-                pbuf_free(pbuf);
-                return 4;//leaf rank finished.
-            }
-//            else {//non-leaf node,
-//                //printf("%s:%u - rank = %03d, non-leaf rank votes yes \n", __func__, __LINE__, my_bcomm->my_rank);
-//                memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));//copy sn
-//
-//                my_bcomm->my_vote = 1;
-//                unsigned int send_len;
-//                pbuf_serialize(*(SN*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int)), sizeof(Vote), (char*)&(my_bcomm->my_vote), my_bcomm->send_buf_my_vote, &send_len);
-//
-//                //can't send vote until received all children's votes
-//                MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
-//                printf("%s:%u - rank = %03d: non-leaf sent vote yes to rank %d\n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->recv_proposal_from);
-//
-//                if(my_bcomm->recv_vote_cnt == my_bcomm->proposal_sent_cnt){//all votes are received, report to predecessor
-//                    *(Vote*) (vote_buf->data) = my_bcomm->my_vote;
-//                    unsigned int send_len;
-//                    pbuf_serialize(vote_buf->sn, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
-//                    MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
-//                    bufer_maintain_irecv(my_bcomm);
-//                    pbuf_free(vote_buf);
-//                    return 3;//received all votes
-//                }
-//
-////                bufer_maintain_irecv(my_bcomm);//??
-////                pbuf_free(pbuf);//??
-//            }
+            //leaf rank vote yes
+            memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));//copy sn
+            printf("%s:%u - rank = %03d, leaf rank votes yes \n", __func__, __LINE__, my_bcomm->my_rank);
+            my_bcomm->my_vote = 1;
+            unsigned int send_len;
+            pbuf_serialize(*(SN*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int)), sizeof(Vote), (char*)&(my_bcomm->my_vote), my_bcomm->send_buf_my_vote, &send_len);
+
+            MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+            bufer_maintain_irecv(my_bcomm);
+            pbuf_free(pbuf);
+            return 4;//leaf rank finished.
         }
-
         // else case: regular forward
     }
     //neither proposal nor vote
@@ -713,7 +684,7 @@ int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
         if(ret == 3 || ret == 2 || ret == 1){//received all votes
             recv_vote_cnt++;
             votes_result &= my_bcomm->my_vote;
-            printf("%s:%u - rank = %03d, received vote, recv_vote_cnt = %d, waiting for %d\n", __func__, __LINE__, my_bcomm->my_rank, recv_vote_cnt, my_bcomm->send_list_len);
+            printf("%s:%u - rank = %03d, received a vote, recv_vote_cnt = %d, need %d in total.\n", __func__, __LINE__, my_bcomm->my_rank, recv_vote_cnt, my_bcomm->send_list_len);
         }
         if ( ret== 0) {
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
