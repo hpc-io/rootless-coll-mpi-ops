@@ -8,12 +8,14 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#define MSG_SIZE_MAX 512
+#define MSG_SIZE_MAX 32768
 enum COM_TAGS {
     BCAST,
+    JOB_DONE,
     IAR_PROPOSAL,
     IAR_VOTE, /* vote for I_All_Reduce */
-    IAR_DECISION /* Final result */
+    IAR_DECISION, /* Final result */
+
 };
 
 typedef int SN;
@@ -477,7 +479,7 @@ int _IAR_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
 }
 
 int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out) {
-    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+//    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     void *recv_buf;
 
     /* Increment # of messages received */
@@ -563,6 +565,9 @@ int irecv(bcomm* my_bcomm, char** recv_buf_out, int* recved_tag_out){
     return -1;
 }
 
+int load_bcast(bcomm* my_bcomm){
+    return 0;
+}
 // Used by broadcaster rank, send to send_list
 int bcast(bcomm* my_bcomm, enum COM_TAGS tag) {
     /* If there are outstanding messages being broadcast, wait for them now */
@@ -761,6 +766,85 @@ int test_IAllReduce(bcomm* my_bcomm, int starter) {
     return -1;
 }
 
+int anycast_benchmark(bcomm* my_bcomm, int root_rank, int cnt, int buf_size){
+    if(buf_size > MSG_SIZE_MAX){
+        printf("Message size too big. Maximum allowed is %d\n", MSG_SIZE_MAX);
+        return -1;
+    }
+
+    char* buf = calloc(buf_size, sizeof(char));
+    char* recv_buf = calloc(buf_size*2, sizeof(char));
+    int recved_tag = 0;
+    int recved_cnt = 0;
+    unsigned long start = get_time_usec();
+    unsigned long time_send = 0;
+    unsigned long time_recv = 5;
+    if(my_bcomm->my_rank == root_rank){//send
+        //load data for bcast
+        my_bcomm->user_send_buf = buf;
+        for(int i = 0; i < cnt; i++){
+            bcast(my_bcomm, BCAST);
+        }
+
+    }else{//recv
+        do{
+            if(irecv(my_bcomm, &recv_buf, &recved_tag) == 0){
+                recved_cnt++;
+            }
+        } while(recved_cnt < cnt);
+    }
+    unsigned long end = get_time_usec();
+    //MPI_Barrier(my_bcomm->my_comm);
+    time_send = end - start;
+
+    //printf("Rank %d: Anycast ran %d times, average costs %lu usec/run\n", my_bcomm->my_rank, cnt, (end - start)/cnt);
+    MPI_Barrier(my_bcomm->my_comm);
+    MPI_Reduce(&time_send, &time_recv, 1, MPI_UNSIGNED_LONG, MPI_MAX, root_rank, my_bcomm->my_comm);//MPI_MAX
+    if(my_bcomm->my_rank == root_rank){
+        float time_avg = time_recv/cnt;
+        printf("Root: Anycast ran %d times, average costs %f usec/run\n", cnt, time_avg);
+    }
+    return 0;
+}
+
+int native_benchmark_single_point_bcast(MPI_Comm my_comm, int root_rank, int cnt, int buf_size){
+    char* buf = calloc(buf_size, sizeof(char));
+    char recv_buf[MSG_SIZE_MAX] = {'\0'};
+    // native mpi bcast
+
+    int my_rank;
+    MPI_Comm_rank(my_comm, &my_rank);
+
+    if(my_rank == root_rank){
+        //sleep(1);
+        unsigned long start = get_time_usec();
+        MPI_Barrier(my_comm);
+        for(int i = 0; i < cnt; i++){
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
+            MPI_Bcast(buf, buf_size, MPI_CHAR, root_rank, my_comm);
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
+        }
+        unsigned long end = get_time_usec();
+        printf("Native MPI_Bcast ran %d times, average costs %lu usec/run\n", cnt, (end - start)/cnt);
+    } else {
+        MPI_Request req;
+        MPI_Status stat;
+        printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
+        MPI_Barrier(my_comm);
+        for(int i = 0; i < cnt; i++){
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
+            MPI_Recv(recv_buf, buf_size, MPI_CHAR, root_rank, MPI_ANY_TAG, my_comm, &stat);
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
+            //MPI_Irecv(recv_buf, buf_size, MPI_CHAR, root_rank, 0, my_comm, &req);
+            printf("Rank %d received %d times\n", my_rank, cnt);
+        }
+
+    }
+    //MPI_Barrier(my_comm);
+    free(buf);
+    return 0;
+}
+
 int prev_rank(int my_rank, int world_size) {
     return (my_rank + (world_size - 1)) % world_size;
 }
@@ -844,18 +928,25 @@ int main(int argc, char** argv) {
     int init_rank;
     time_t t;
 
+    init_rank = atoi(argv[1]);
+    game_cnt = atoi(argv[2]);
+    int msg_size = atoi(argv[3]);
+
     srand((unsigned) time(&t) + getpid());
 
     MPI_Init(NULL, NULL);
 
+    //native_benchmark_single_point_bcast(MPI_COMM_WORLD, init_rank, game_cnt, msg_size);
+
     if(NULL == (my_bcomm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX)))
         return 0;
 
-    init_rank = atoi(argv[1]);
-//    game_cnt = atoi(argv[2]);
+    anycast_benchmark(my_bcomm, init_rank, game_cnt, msg_size);
+    bcomm_teardown(my_bcomm);
 //    hacky_sack(game_cnt, init_rank, my_bcomm);
 //    MPI_Barrier(my_bcomm->my_comm);
-    test_IAllReduce(my_bcomm, init_rank);
+
+//    test_IAllReduce(my_bcomm, init_rank);
 
     MPI_Finalize();
 
