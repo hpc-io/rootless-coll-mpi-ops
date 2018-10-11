@@ -396,7 +396,7 @@ int bufer_maintain_irecv(bcomm* my_bcomm) {
     return -1;
 }
 
-int _IAR_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
+int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
 
     if(status.MPI_TAG == IAR_VOTE){//collect vote and up stream
@@ -541,7 +541,7 @@ int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out) {
     return 0;
 }
 int make_progress(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
-    int ret = _IAR_process(my_bcomm, status, recv_buf_out);
+    int ret = _IAllReduce_process(my_bcomm, status, recv_buf_out);
     if(ret != 0)
         return ret;
 
@@ -651,18 +651,14 @@ int bcomm_teardown(bcomm* my_bcomm) {
     return recv_cnt;
 }
 
-// A toy comparitor
+//Make decision on which proposal will win, or both wins(compatible proposals)
+//A toy comparitor
 int agree_proposal(char* p1, char* p2){
     int ret = strcmp(p1, p2);
     if(ret == 0)
         return 1;
     else
         return 0;
-}
-
-//Make decision on which proposal will win, or both wins(compatible proposals)
-int judge_proposals(char* p1, char* p2){
-    return 1;
 }
 
 int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
@@ -709,23 +705,20 @@ int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
     return votes_result;
 }
 
-int test_IAllReduce(bcomm* my_bcomm, int starter) {
+int test_IAllReduce(bcomm* my_bcomm, int starter, int no_rank) {
     char* my_proposal = "111";
     char* recv_buf = malloc(2 * MSG_SIZE_MAX);
+    int result = -1;
     //printf("Rank %d: send_channel_cnt = %d, send_list_len = %d\n", my_bcomm->my_rank, my_bcomm->send_channel_cnt, my_bcomm->send_list_len);
     if (my_bcomm->my_rank == starter) {
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
         int len = strlen(my_proposal);
-        int result = iAllReduceStart(my_bcomm, my_proposal, len);
-        if (result) {
-            printf("Proposal approved\n");
-        } else {
-            printf("Proposal declined\n");
-        }
+        result = iAllReduceStart(my_bcomm, my_proposal, len);
+
     } else {
         usleep(1500);
-        if (my_bcomm->my_rank % 2 == 0) {
-            my_bcomm->my_proposal = "111";
+        if (my_bcomm->my_rank  == no_rank) {
+            my_bcomm->my_proposal = "000";
         } else {
             my_bcomm->my_proposal = "111";
         }
@@ -761,6 +754,16 @@ int test_IAllReduce(bcomm* my_bcomm, int starter) {
             pbuf_free(pbuf);
 
         } while (tag_recv != IAR_DECISION);
+    }
+
+    MPI_Barrier(my_bcomm->my_comm);
+
+    if(my_bcomm->my_rank == starter){
+        if (result) {
+            printf("\n\n =========== Proposal approved =========== \n\n");
+        } else {
+            printf("\n\n =========== Proposal declined =========== \n\n");
+        }
     }
     //free(recv_buf); can' free, why?
     return -1;
@@ -838,7 +841,6 @@ int native_benchmark_single_point_bcast(MPI_Comm my_comm, int root_rank, int cnt
             //MPI_Irecv(recv_buf, buf_size, MPI_CHAR, root_rank, 0, my_comm, &req);
             printf("Rank %d received %d times\n", my_rank, cnt);
         }
-
     }
     //MPI_Barrier(my_comm);
     free(buf);
@@ -931,7 +933,7 @@ int main(int argc, char** argv) {
     init_rank = atoi(argv[1]);
     game_cnt = atoi(argv[2]);
     int msg_size = atoi(argv[3]);
-
+    int no_rank = atoi(argv[4]);
     srand((unsigned) time(&t) + getpid());
 
     MPI_Init(NULL, NULL);
@@ -941,12 +943,13 @@ int main(int argc, char** argv) {
     if(NULL == (my_bcomm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX)))
         return 0;
 
-    anycast_benchmark(my_bcomm, init_rank, game_cnt, msg_size);
-    bcomm_teardown(my_bcomm);
+    //anycast_benchmark(my_bcomm, init_rank, game_cnt, msg_size);
+
 //    hacky_sack(game_cnt, init_rank, my_bcomm);
 //    MPI_Barrier(my_bcomm->my_comm);
 
-//    test_IAllReduce(my_bcomm, init_rank);
+    test_IAllReduce(my_bcomm, init_rank, no_rank);
+    //bcomm_teardown(my_bcomm);
 
     MPI_Finalize();
 
