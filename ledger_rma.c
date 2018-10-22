@@ -19,7 +19,7 @@ enum COM_TAGS {
 };
 
 typedef int SN;
-typedef int Vote;
+typedef int Vote;// used for & operation. 1 for yes, 0 for no.
 
 typedef enum REQ_STATUS {
     COMPLETED,
@@ -396,6 +396,25 @@ int bufer_maintain_irecv(bcomm* my_bcomm) {
     return -1;
 }
 
+int _IAllReduce_StarterVote(bcomm* my_bcomm, Vote vote_in, SN sn) {
+    PBuf* vote_buf = malloc(sizeof(PBuf));
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);\
+    vote_buf->data_len = sizeof(Vote);
+    vote_buf->data = malloc(vote_buf->data_len);
+    vote_buf->sn = sn;
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    unsigned int send_len;
+    pbuf_serialize(vote_buf->sn, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    bufer_maintain_irecv(my_bcomm);
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    pbuf_free(vote_buf);
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    return 0;
+}
+
 int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out){
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
 
@@ -469,7 +488,9 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
             MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
             bufer_maintain_irecv(my_bcomm);
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
             pbuf_free(pbuf);
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
             return 4;//leaf rank finished.
         }
         // else case: regular forward
@@ -652,21 +673,30 @@ int bcomm_teardown(bcomm* my_bcomm) {
 }
 
 //Make decision on which proposal will win, or both wins(compatible proposals)
-//A toy comparitor
+//A toy comparitor, return 1 for agreed, 0 for denied.
 int agree_proposal(char* p1, char* p2){
-    int ret = strcmp(p1, p2);
-    if(ret == 0)
-        return 1;
-    else
-        return 0;
+    return 1; //for test multi proposal
+//    int ret = strcmp(p1, p2);
+//    if(ret == 0)
+//        return 1;
+//    else
+//        return 0;
 }
 
-int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
+//Return 0 if p1 wins, otherwise return 1.
+int judge_proposal(char* p1, char* p2){
+    if(p1[0] >= p2[0]){
+        return 0;
+    }else
+        return 1;
+}
+
+int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size, SN proposal_id){
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     char* recv_buf = malloc(2* MSG_SIZE_MAX);
-    SN sn = 1234;//make_sn(my_bcomm);
+    //SN sn = 1234;//make_sn(my_bcomm);
     unsigned buf_len;
-    if(0 != pbuf_serialize(sn, prop_size, proposal, my_bcomm->user_send_buf, &buf_len)){
+    if(0 != pbuf_serialize(proposal_id, prop_size, proposal, my_bcomm->user_send_buf, &buf_len)){
         printf("pbuf_serialize failed.\n");
         return -1;
     }
@@ -681,7 +711,7 @@ int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     while (recv_vote_cnt < my_bcomm->send_list_len) { //use send_list_len ONLY on the started, other places use proposal_sent_cnt.
         ret = irecv(my_bcomm, &recv_buf, &recved_tag);
-
+        SN sn = *(SN*)recv_buf;
         if(ret == 3 || ret == 2 || ret == 1){//received all votes
             recv_vote_cnt++;
             votes_result &= my_bcomm->my_vote;
@@ -691,6 +721,25 @@ int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
             if (recved_tag == IAR_PROPOSAL) {
                 // TODO: multi proposal cases
+                if(1 == judge_proposal(proposal, recv_buf)){//others wins
+                    //vote yes
+
+                    printf("%s:%u - rank = %03d, I'm canceling my own proposal due to a conflicting proposal, vote yes to another proposal...\n", __func__, __LINE__, my_bcomm->my_rank);
+                    _IAllReduce_StarterVote(my_bcomm, 1, sn);
+                    //bcast NO decision for my proposal
+                    printf("%s:%u - rank = %03d, my proposal is canceled due to a conflicting proposal, bcasting final decision\n", __func__, __LINE__, my_bcomm->my_rank);
+                    memcpy(my_bcomm->user_send_buf + sizeof(SN) + sizeof(unsigned int), &votes_result, sizeof(Vote));
+                    bcast(my_bcomm, IAR_DECISION);
+                    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+                    free(recv_buf);
+                    return 0;
+                }else{//mine wins
+                    //decline received proposal: vote NO.
+                    printf("%s:%u - rank = %03d, my proposal has canceled a conflicting proposal, vote no to another proposal...\n", __func__, __LINE__, my_bcomm->my_rank);
+                    _IAllReduce_StarterVote(my_bcomm, 0, sn);
+                    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+                    //nothing for local proposal
+                }
             }
             if (recved_tag == IAR_VOTE) {
 
@@ -701,11 +750,11 @@ int iAllReduceStart(bcomm* my_bcomm, char* proposal, unsigned long prop_size){
     memcpy(my_bcomm->user_send_buf + sizeof(SN) + sizeof(unsigned int), &votes_result, sizeof(Vote));
     bcast(my_bcomm, IAR_DECISION);
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-    free(recv_buf);
+    //free(recv_buf);
     return votes_result;
 }
 
-int test_IAllReduce(bcomm* my_bcomm, int starter, int no_rank) {
+int test_IAllReduce_single_proposal(bcomm* my_bcomm, int starter, int no_rank) {
     char* my_proposal = "111";
     char* recv_buf = malloc(2 * MSG_SIZE_MAX);
     int result = -1;
@@ -713,7 +762,7 @@ int test_IAllReduce(bcomm* my_bcomm, int starter, int no_rank) {
     if (my_bcomm->my_rank == starter) {
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
         int len = strlen(my_proposal);
-        result = iAllReduceStart(my_bcomm, my_proposal, len);
+        result = iAllReduceStart(my_bcomm, my_proposal, len, my_bcomm->my_rank);
 
     } else {
         usleep(1500);
@@ -763,6 +812,78 @@ int test_IAllReduce(bcomm* my_bcomm, int starter, int no_rank) {
             printf("\n\n =========== Proposal approved =========== \n\n");
         } else {
             printf("\n\n =========== Proposal declined =========== \n\n");
+        }
+    }
+    //free(recv_buf); can' free, why?
+    return -1;
+}
+
+int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int starter_1, int starter_2) {
+
+    char* recv_buf = malloc(2 * MSG_SIZE_MAX);
+    int result = -1;
+    int proposal_len = 0;
+    int receved_decision = 0;//# of decision received, same with the number of proposals. Not ideal, but works as a testcase for now.
+    //printf("Rank %d: send_channel_cnt = %d, send_list_len = %d\n", my_bcomm->my_rank, my_bcomm->send_channel_cnt, my_bcomm->send_list_len);
+    if (my_bcomm->my_rank == starter_1) {
+        my_bcomm->my_proposal = "111";
+        proposal_len = strlen(my_bcomm->my_proposal);
+        result = iAllReduceStart(my_bcomm, my_bcomm->my_proposal, proposal_len, my_bcomm->my_rank);
+
+    } else if(my_bcomm->my_rank  == starter_2){
+        usleep(100); //after all started
+        my_bcomm->my_proposal = "000";
+        proposal_len = strlen(my_bcomm->my_proposal);
+        result = iAllReduceStart(my_bcomm, my_bcomm->my_proposal, proposal_len, my_bcomm->my_rank);
+    }
+    else {
+        usleep(500);//before starter_2
+
+        my_bcomm->my_proposal = "000";
+
+        int tag_recv = -1;
+        int ret = -1;
+        do {
+
+            ret = irecv(my_bcomm, &recv_buf, &tag_recv);
+            if(ret == -1){
+                continue;
+            }
+
+            PBuf* pbuf = malloc(sizeof(PBuf));
+
+            pbuf_deserialize(recv_buf, pbuf);
+
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+            switch (tag_recv) {
+            case IAR_PROPOSAL:
+                printf("Rank %d: Received proposal: %d:%s\n", my_bcomm->my_rank, pbuf->sn, pbuf->data);
+                break;
+            case IAR_VOTE:
+                printf("Rank %d: Received vote: %d:%d\n", my_bcomm->my_rank, pbuf->sn, *(Vote*)(pbuf->data));
+                break;
+            case IAR_DECISION:
+                printf("Rank %d: Received decision: %d:%d\n", my_bcomm->my_rank, pbuf->sn, *(Vote*)(pbuf->data));
+                receved_decision++;
+                break;
+
+            default:
+                printf("Warning: Rank %d: Received unexpected msg!!\n", my_bcomm->my_rank);
+                break;
+            }
+
+            pbuf_free(pbuf);
+            usleep(600);
+        } while (receved_decision < 2);
+    }
+
+    MPI_Barrier(my_bcomm->my_comm);
+
+    if(my_bcomm->my_rank == starter_1 || my_bcomm->my_rank == starter_2){
+        if (result) {
+            printf("\n\n =========== Proposal %s approved =========== \n\n", my_bcomm->my_proposal);
+        } else {
+            printf("\n\n =========== Proposal %s declined =========== \n\n", my_bcomm->my_proposal);
         }
     }
     //free(recv_buf); can' free, why?
@@ -930,10 +1051,10 @@ int main(int argc, char** argv) {
     int init_rank;
     time_t t;
 
-    init_rank = atoi(argv[1]);
-    game_cnt = atoi(argv[2]);
-    int msg_size = atoi(argv[3]);
-    int no_rank = atoi(argv[4]);
+    //init_rank = atoi(argv[1]);
+    //game_cnt = atoi(argv[2]);
+    //int msg_size = atoi(argv[3]);
+    //int no_rank = atoi(argv[4]);
     srand((unsigned) time(&t) + getpid());
 
     MPI_Init(NULL, NULL);
@@ -948,7 +1069,10 @@ int main(int argc, char** argv) {
 //    hacky_sack(game_cnt, init_rank, my_bcomm);
 //    MPI_Barrier(my_bcomm->my_comm);
 
-    test_IAllReduce(my_bcomm, init_rank, no_rank);
+    //test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank);
+    int starter_1 = atoi(argv[1]);
+    int starter_2 = atoi(argv[2]);
+    test_IAllReduce_multi_proposal(my_bcomm, starter_1, starter_2);
     //bcomm_teardown(my_bcomm);
 
     MPI_Finalize();
