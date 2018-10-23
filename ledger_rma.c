@@ -474,24 +474,7 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
             pbuf_free(pbuf);
             return 1;//proposal declined locally, reported
         }else{//local approved
-            if(my_bcomm->send_channel_cnt != 0){//non leaf rank
-                if(IS_IAR_STARTER == 0){//leaf rank vote yes
-                    memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));//copy sn
-                    my_bcomm->my_vote = 1;
-                    unsigned int send_len;
-                    pbuf_serialize(*(SN*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int)), sizeof(Vote), (char*)&(my_bcomm->my_vote), my_bcomm->send_buf_my_vote, &send_len);
 
-                    printf("%s:%u - rank = %03d, non-starter, leaf rank votes yes \n", __func__, __LINE__, my_bcomm->my_rank);
-                    MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
-                    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-                }
-                if(check_passed_origin(my_bcomm, origin, my_bcomm->send_list[0]) == 0)//pass origin, this is a temperory leaf rank
-                    return 0;// return 0 will be caught by _forward();
-            }
-
-            //leaf rank vote yes
-
-            // only send when I'm not a proposal starter.
             if(IS_IAR_STARTER == 0){//leaf rank vote yes
                 memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));//copy sn
                 my_bcomm->my_vote = 1;
@@ -502,11 +485,16 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
                 MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
                 printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
             }
-            bufer_maintain_irecv(my_bcomm);
-            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-            pbuf_free(pbuf);
-            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-            return 4;//leaf rank finished.
+
+            if(my_bcomm->send_channel_cnt != 0){//non leaf rank
+                if(check_passed_origin(my_bcomm, origin, my_bcomm->send_list[0]) == 0)//pass origin, this is a temperory leaf rank
+                    return 0;// return 0 will be caught by _forward();
+                else
+                    return 9;//not be forwarded, this is a duplicated msg, and need to be discarded.
+            }else
+                return 4;//leaf rank agreed.
+            //leaf rank vote yes
+
         }
         // else case: regular forward
     }
@@ -815,7 +803,7 @@ int test_IAllReduce_single_proposal(bcomm* my_bcomm, int starter, int no_rank) {
                 break;
 
             default:
-                printf("Warning: Rank %d: Received unexpected msg!!\n", my_bcomm->my_rank);
+                printf("Warning: Rank %d: Received unexpected msg, tag = %d\n", my_bcomm->my_rank, tag_recv);
                 break;
             }
 
@@ -891,7 +879,7 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int starter_1, int starter_2
                 break;
 
             default:
-                printf("Warning: Passive Rank %d: Received unexpected msg!!\n", my_bcomm->my_rank);
+                printf("Warning: Passive Rank %d: Received unexpected msg, tag = %d\n", my_bcomm->my_rank, tag_recv);
                 break;
             }
 
