@@ -9,6 +9,7 @@
 #include <pthread.h>
 
 #define MSG_SIZE_MAX 32768
+#define VOTE_POOL_SIZE 16 //maximal concurrent proposal supported
 enum COM_TAGS {
     BCAST,
     JOB_DONE,
@@ -18,8 +19,74 @@ enum COM_TAGS {
 
 };
 
-typedef int SN;
+typedef int ID;
 typedef int Vote;// used for & operation. 1 for yes, 0 for no.
+typedef struct Vote_pool{
+    ID pid; // proposal ID, default = -1;
+    Vote vote; //accumulated vote, default = 1;
+} vote_pool; //clear when vote result is reported.
+
+int vote_pool_set(vote_pool* pools, ID k, Vote v){//add new, or merge value
+    int i = 0;
+    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
+        if(pools[i].pid == k){
+            pools[i].vote &= v;
+            return 0;
+        }
+    }
+    if(i == VOTE_POOL_SIZE - 1){// id not found, add new one.
+        for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
+            if(pools[i].pid == -1){
+                pools[i].pid = k;
+                pools[i].vote = v;
+                return 0;
+            }
+        }
+
+        if(i == VOTE_POOL_SIZE - 1) //no empty pool for use.
+            return -1;
+    }
+    return -2;
+}
+
+int vote_pool_get(vote_pool* pools, ID k, vote_pool* result){
+    if(!result)//null
+        return -1;
+        int i = 0;
+    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
+        if(pools[i].pid == k){
+            result->pid = k;
+            result->vote = pools[i].vote;
+            return 0;
+        }
+    }
+    return -1;//not found
+}
+
+int vote_pool_rm(vote_pool* pools, ID k){
+    int i = 0;
+    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
+        if(pools[i].pid == k){
+            pools[i].pid = -1;
+            pools[i].vote = 1;
+            return 0;
+        }
+    }
+    return -1;//not found
+}
+
+int vote_pool_reset(vote_pool* pools) {
+    for (int i = 0; i <= VOTE_POOL_SIZE - 1; i++) {
+        pools[i].pid = -1;
+        pools[i].vote = 1;
+    }
+    return 0;
+}
+
+//struct vpool_link {
+//    vote_pool vp;
+//    vote_pool* next = NULL;
+//};
 
 typedef enum REQ_STATUS {
     COMPLETED,
@@ -28,7 +95,7 @@ typedef enum REQ_STATUS {
 }REQ_STATUS;
 
 typedef struct bcomm_token_t {
-    SN req_id;
+    ID req_id;
     REQ_STATUS req_stat;
     bool completed;
     bool vote_result;
@@ -69,7 +136,8 @@ typedef struct BCastCommunicator {
     
     /* I_all_reduce fields*/
     char* IAR_recv_buf;                 /* IallReduce recv buf */
-    Vote my_vote;                       /* 1 for agree, 0 for decline */
+    Vote vote_my_proposal_no_use;          /* Used only by an proposal-active rank. 1 for agree, 0 for decline. Accumulate votes for a proposal that I just submitted. */
+    vote_pool my_vote_pools[VOTE_POOL_SIZE];        /* To support multiple proposals, use a vote pool for each proposal. Use linked list if concurrent proposal number is large. */
     char* my_proposal;                  /* This is used to compare against received proposal, shuold be updated timely */
     char* send_buf_my_vote;
     int recv_vote_cnt;
@@ -91,21 +159,21 @@ typedef struct {
 Log MY_LOG;
 int IS_IAR_STARTER = 0;
 //IAR msg formats
-// | SN sn | char* proposal_content |
+// | SN pid | char* proposal_content |
 typedef struct Proposal_buf{
-    SN sn;
+    ID pid;
     unsigned int data_len;
     char* data;
 }PBuf;
 
-int pbuf_serialize(SN sn_in, unsigned int data_len_in, char* data_in, char* buf_out, unsigned int* buf_len_out){
+int pbuf_serialize(ID pid_in, unsigned int data_len_in, char* data_in, char* buf_out, unsigned int* buf_len_out){
     if(!data_in || !buf_out || data_len_in < 1)
         return -1;
-    memcpy(buf_out, &sn_in, sizeof(SN));
-    memcpy(buf_out + sizeof(SN), &data_len_in, sizeof(unsigned int));
-    memcpy(buf_out + sizeof(SN) + sizeof(unsigned int), data_in, data_len_in);
+    memcpy(buf_out, &pid_in, sizeof(ID));
+    memcpy(buf_out + sizeof(ID), &data_len_in, sizeof(unsigned int));
+    memcpy(buf_out + sizeof(ID) + sizeof(unsigned int), data_in, data_len_in);
     if(buf_len_out){
-        *buf_len_out = sizeof(SN)  /* SN */
+        *buf_len_out = sizeof(ID)  /* SN */
             + sizeof(unsigned int)  /* data_len */
             + data_len_in;          /* data */
     }
@@ -119,42 +187,42 @@ void pbuf_free(PBuf* pbuf){
 int pbuf_deserialize(char* buf_in, PBuf* pbuf_out){
     if(!buf_in || !pbuf_out)
         return -1;
-    memcpy(&(pbuf_out->sn), buf_in, sizeof(SN));
+    memcpy(&(pbuf_out->pid), buf_in, sizeof(ID));
 
-    memcpy(&(pbuf_out->data_len), buf_in + sizeof(SN), sizeof(unsigned int));
-    //printf("%s: sn = %d, data_len = %u\n", __func__, pbuf_out->sn, pbuf_out->data_len);
+    memcpy(&(pbuf_out->data_len), buf_in + sizeof(ID), sizeof(unsigned int));
+    //printf("%s: pid = %d, data_len = %u\n", __func__, pbuf_out->pid, pbuf_out->data_len);
     //printf("%s:%u \n", __func__, __LINE__);
-    pbuf_out->data = malloc(MSG_SIZE_MAX - sizeof(SN));
+    pbuf_out->data = malloc(MSG_SIZE_MAX - sizeof(ID));
     //printf("%s:%u \n", __func__, __LINE__);
-    memcpy(pbuf_out->data, buf_in + sizeof(SN) + sizeof(unsigned int), pbuf_out->data_len);
+    memcpy(pbuf_out->data, buf_in + sizeof(ID) + sizeof(unsigned int), pbuf_out->data_len);
     return 0;
 }
 
-int pbuf_deserialize_t(char* buf_in, SN* sn_out, unsigned int* data_len_out, char* data_out){
+int pbuf_deserialize_t(char* buf_in, ID* pid_out, unsigned int* data_len_out, char* data_out){
     if(!buf_in)
         return -1;
 
-    if(sn_out)
-        memcpy(sn_out, buf_in, sizeof(SN));
+    if(pid_out)
+        memcpy(pid_out, buf_in, sizeof(ID));
 
     unsigned int len = 0;
-    memcpy(&len, buf_in + sizeof(SN), sizeof(unsigned int));
+    memcpy(&len, buf_in + sizeof(ID), sizeof(unsigned int));
 
     if(data_len_out)
         *data_len_out = len;
 
     if(data_out)
-        memcpy(data_out, buf_in + sizeof(SN) + sizeof(unsigned int), len);
+        memcpy(data_out, buf_in + sizeof(ID) + sizeof(unsigned int), len);
     return 0;
 }
 
 typedef struct Vote_buf{
-    SN sn;
+    ID pid;
     Vote vote;
 }VBuf;
 
-SN make_sn(bcomm* my_bcomm){
-    return (SN) my_bcomm->my_rank;
+ID make_pid(bcomm* my_bcomm){
+    return (ID) my_bcomm->my_rank;
 }
 
 int proposal_agree(char* p1, char* p2);
@@ -333,10 +401,14 @@ bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max) {
     my_bcomm->curr_recv_buf_index = 0;
 
     /* Set up I_All_Reduce fields */
-    my_bcomm->IAR_recv_buf = (char*)malloc(sizeof(int) + sizeof(SN) + msg_size_max);                 /* IallReduce recv buf */
-    my_bcomm->my_vote = 1;                       /* 1 for agree, 0 for decline, default is 1 */
+    my_bcomm->IAR_recv_buf = (char*)malloc(sizeof(int) + sizeof(ID) + msg_size_max);                 /* IallReduce recv buf */
+
+    //my_bcomm->vote_my_proposal_no_use = 1;    /* 1 for agree, 0 for decline, default is 1 */
+
+    vote_pool_reset(my_bcomm->my_vote_pools);
+
     my_bcomm->my_proposal = (char*)malloc(msg_size_max);                  /* This is used to compare against received proposal, shuold be updated timely */
-    my_bcomm->send_buf_my_vote = (char*)malloc(sizeof(int) + sizeof(SN) + sizeof(Vote));
+    my_bcomm->send_buf_my_vote = (char*)malloc(sizeof(int) + sizeof(ID) + sizeof(Vote));
     my_bcomm->recv_vote_cnt = 0;
     my_bcomm->recv_proposal_from = -1;
     my_bcomm->proposal_sent_cnt = -1;
@@ -396,15 +468,15 @@ int bufer_maintain_irecv(bcomm* my_bcomm) {
     return -1;
 }
 
-int _IAllReduce_StarterVote(bcomm* my_bcomm, Vote vote_in, SN sn) {
+int _IAllReduce_StarterVote(bcomm* my_bcomm, Vote vote_in, ID pid) {
     PBuf* vote_buf = malloc(sizeof(PBuf));
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);\
     vote_buf->data_len = sizeof(Vote);
     vote_buf->data = malloc(vote_buf->data_len);
-    vote_buf->sn = sn;
+    vote_buf->pid = pid;
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     unsigned int send_len;
-    pbuf_serialize(vote_buf->sn, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
+    pbuf_serialize(vote_buf->pid, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
@@ -427,14 +499,20 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
 
         PBuf* vote_buf = malloc(sizeof(PBuf));
 
-        pbuf_deserialize(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index], vote_buf);// + sizeof(int). IAR_VOTE doesn't need origin
+        pbuf_deserialize(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index], vote_buf);// + sizeof(int). IAR_VOTE doepid't need origin
 
-        my_bcomm->my_vote &= *(Vote*)(vote_buf->data);//get received vote
+        //my_bcomm->vote_my_proposal_no_use &= *(Vote*)(vote_buf->data);//get received vote
+        vote_pool_set(my_bcomm->my_vote_pools, vote_buf->pid, *(Vote*)(vote_buf->data));
+
         //printf("%s:%u - rank %03d received a vote: %d, now my vote = %d\n", __func__, __LINE__, my_bcomm->my_rank, *(Vote*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(SN)+ sizeof(unsigned int)), my_bcomm->my_vote);
         if(my_bcomm->recv_vote_cnt == my_bcomm->proposal_sent_cnt){//all votes are received, report to predecessor
-            *(Vote*) (vote_buf->data) = my_bcomm->my_vote;
+            vote_pool vp;
+            if(vote_pool_get(my_bcomm->my_vote_pools, vote_buf->pid, &vp) != 0)
+                return -1;
+
+            *(Vote*) (vote_buf->data) = vp.vote;
             unsigned int send_len;
-            pbuf_serialize(vote_buf->sn, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
+            pbuf_serialize(vote_buf->pid, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
             MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
             bufer_maintain_irecv(my_bcomm);
             pbuf_free(vote_buf);
@@ -462,10 +540,14 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
         if (0 == proposal_agree(my_bcomm->my_proposal, pbuf->data)) {//local declined, up stream to predecessor
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+
             //set vote
-            my_bcomm->my_vote = 0;
+            Vote tmp_v = 0;
+            //my_bcomm->vote_my_proposal_no_use = tmp_v;
+            vote_pool_set(my_bcomm->my_vote_pools, pbuf->pid, 0);
+
             unsigned int send_len;
-            pbuf_serialize(pbuf->sn, sizeof(Vote), (char*)&(my_bcomm->my_vote), my_bcomm->send_buf_my_vote, &send_len);
+            pbuf_serialize(pbuf->pid, sizeof(Vote), (char*)&(tmp_v), my_bcomm->send_buf_my_vote, &send_len);
 
             MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);// sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
@@ -476,10 +558,14 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
         }else{//local approved
 
             if(IS_IAR_STARTER == 0){//leaf rank vote yes
-                memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(SN));//copy sn
-                my_bcomm->my_vote = 1;
+                memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(ID));//copy pid
+
+                Vote tmp_v = 1;
+                //my_bcomm->vote_my_proposal_no_use = tmp_v;
+                vote_pool_set(my_bcomm->my_vote_pools, pbuf->pid, 0);
+
                 unsigned int send_len;
-                pbuf_serialize(*(SN*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int)), sizeof(Vote), (char*)&(my_bcomm->my_vote), my_bcomm->send_buf_my_vote, &send_len);
+                pbuf_serialize(*(ID*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int)), sizeof(Vote), (char*)&(tmp_v), my_bcomm->send_buf_my_vote, &send_len);
 
                 printf("%s:%u - rank = %03d, non-starter, leaf rank votes yes \n", __func__, __LINE__, my_bcomm->my_rank);
                 MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
@@ -689,20 +775,23 @@ int proposal_agree(char* p1, char* p2){
 //Return 0 if p1 wins, otherwise return 1.
 int proposal_compete(char* p1, char* p2){
     if(p1[0] >= p2[0]){
-        return 0;
+        return 1;//0
     }else
-        return 1;
+        return 0;//1
 }
 
-int iAllReduceStart(bcomm* my_bcomm, char* my_proposal, unsigned long prop_size, SN my_proposal_id){
+int iAllReduceStart(bcomm* my_bcomm, char* my_proposal, unsigned long prop_size, ID my_proposal_id){
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     char* recv_buf = malloc(2* MSG_SIZE_MAX);
-    //SN sn = 1234;//make_sn(my_bcomm);
+    //SN pid = 1234;//make_pid(my_bcomm);
     unsigned buf_len;
     if(0 != pbuf_serialize(my_proposal_id, prop_size, my_proposal, my_bcomm->user_send_buf, &buf_len)){
         printf("pbuf_serialize failed.\n");
         return -1;
     }
+
+    if(vote_pool_set(my_bcomm->my_vote_pools, my_proposal_id, 1) != 0)
+        return -1;
 
     bcast(my_bcomm, IAR_PROPOSAL);//IAR_PROPOSAL
 
@@ -716,10 +805,13 @@ int iAllReduceStart(bcomm* my_bcomm, char* my_proposal, unsigned long prop_size,
         ret = irecv(my_bcomm, &recv_buf, &recved_tag);
         if(ret != -1)
             printf("%s:%u - rank = %03d, starter: irecv() = %d\n", __func__, __LINE__, my_bcomm->my_rank, ret);
-        SN other_id = *(SN*)recv_buf;
-        if(ret == 3 || ret == 2 || ret == 1){//received all votes
+        ID other_id = *(ID*)recv_buf;
+        if(ret == 3 || ret == 2 || ret == 1){//received all votes for my proposals: note that vote won't be forwarded, so they all reach the destination directly.
             recv_vote_cnt++;
-            votes_result &= my_bcomm->my_vote;
+
+            //votes_result &= my_bcomm->vote_my_proposal_no_use;// nouse
+            //vote_pool_set(my_bcomm->my_vote_pools, other_id, ) no need, it's updated by irecv.
+
             printf("%s:%u - rank = %03d, received a vote, recv_vote_cnt = %d, need %d in total.\n", __func__, __LINE__, my_bcomm->my_rank, recv_vote_cnt, my_bcomm->send_list_len);
         }
         if ( ret == 0 || ret == 4) {//make_progress() == 0, received and forwarded something: proposal or decision, won't be a vote.
@@ -730,20 +822,21 @@ int iAllReduceStart(bcomm* my_bcomm, char* my_proposal, unsigned long prop_size,
                 if(1 == proposal_compete(my_proposal, recv_buf)){//others wins
                     //vote yes
 
-                    printf("%s:%u - rank = %03d, I'm canceling my own proposal due to a conflicting proposal, vote yes to another proposal(prop_id = %d)...\n", __func__, __LINE__, my_bcomm->my_rank, other_id);
+                    printf("%s:%u - rank = %03d, I'm canceling my own proposal due to a conflicting proposal, vote yes to another proposal(ID = %d)...\n", __func__, __LINE__, my_bcomm->my_rank, other_id);
                     _IAllReduce_StarterVote(my_bcomm, 1, other_id);
                     //bcast NO decision for my proposal
                     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-                    memcpy(my_bcomm->user_send_buf + sizeof(SN) + sizeof(unsigned int), &votes_result, sizeof(Vote));
+                    Vote v = 0;
+                    memcpy(my_bcomm->user_send_buf + sizeof(ID) + sizeof(unsigned int), &v, sizeof(Vote));
                     bcast(my_bcomm, IAR_DECISION);
                     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-                    free(recv_buf);
+                    //free(recv_buf);??
                     return 0;
                 }else{//mine wins
                     //decline received proposal: vote NO.
 
                     _IAllReduce_StarterVote(my_bcomm, 0, other_id);
-                    printf("%s:%u - rank = %03d, my proposal has canceled a conflicting proposal, vote no to another proposal(prop_id = %d)...\n", __func__, __LINE__, my_bcomm->my_rank, other_id);
+                    printf("%s:%u - rank = %03d, my proposal has canceled a conflicting proposal, vote no to another proposal(ID = %d)...\n", __func__, __LINE__, my_bcomm->my_rank, other_id);
 
                     //nothing for local proposal
                 }
@@ -753,11 +846,11 @@ int iAllReduceStart(bcomm* my_bcomm, char* my_proposal, unsigned long prop_size,
         }
     }
     IS_IAR_STARTER = 0;
-    printf("%s:%u - rank = %03d, my proposal is not canceled amid loop receiving, bcasting final decision (prop_id:decision): %d:%d\n", __func__, __LINE__, my_bcomm->my_rank, my_proposal_id, votes_result);
-    memcpy(my_bcomm->user_send_buf + sizeof(SN) + sizeof(unsigned int), &votes_result, sizeof(Vote));
+    printf("%s:%u - rank = %03d, my proposal is not canceled amid loop receiving, bcasting final decision (ID:decision): %d:%d\n", __func__, __LINE__, my_bcomm->my_rank, my_proposal_id, votes_result);
+    memcpy(my_bcomm->user_send_buf + sizeof(ID) + sizeof(unsigned int), &votes_result, sizeof(Vote));
     bcast(my_bcomm, IAR_DECISION);
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-    //free(recv_buf);
+    //free(recv_buf);??
     return votes_result;
 }
 
@@ -793,13 +886,13 @@ int test_IAllReduce_single_proposal(bcomm* my_bcomm, int starter, int no_rank) {
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
             switch (tag_recv) {
             case IAR_PROPOSAL:
-                printf("Rank %d: Received proposal: %d:%s\n", my_bcomm->my_rank, pbuf->sn, pbuf->data);
+                printf("Rank %d: Received proposal: %d:%s\n", my_bcomm->my_rank, pbuf->pid, pbuf->data);
                 break;
             case IAR_VOTE:
-                printf("Rank %d: Received vote: %d:%d\n", my_bcomm->my_rank, pbuf->sn, *(Vote*)(pbuf->data));
+                printf("Rank %d: Received vote: %d:%d\n", my_bcomm->my_rank, pbuf->pid, *(Vote*)(pbuf->data));
                 break;
             case IAR_DECISION:
-                printf("Rank %d: Received decision: %d:%d\n", my_bcomm->my_rank, pbuf->sn, *(Vote*)(pbuf->data));
+                printf("Rank %d: Received decision: %d:%d\n", my_bcomm->my_rank, pbuf->pid, *(Vote*)(pbuf->data));
                 break;
 
             default:
@@ -868,13 +961,13 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int starter_1, int starter_2
             //printf("%s:%u - rank = %03d, passive rank received msg, tag = %d\n", __func__, __LINE__, my_bcomm->my_rank, tag_recv);
             switch (tag_recv) {
             case IAR_PROPOSAL:
-                printf("Passive Rank %d: Received proposal: %d:%s\n", my_bcomm->my_rank, pbuf->sn, pbuf->data);
+                printf("Passive Rank %d: Received proposal: %d:%s\n", my_bcomm->my_rank, pbuf->pid, pbuf->data);
                 break;
             case IAR_VOTE:
-                printf("Passive Rank %d: Received vote: %d:%d\n", my_bcomm->my_rank, pbuf->sn, *(Vote*)(pbuf->data));
+                printf("Passive Rank %d: Received vote: %d:%d\n", my_bcomm->my_rank, pbuf->pid, *(Vote*)(pbuf->data));
                 break;
             case IAR_DECISION:
-                printf("Passive Rank %d: Received decision: %d:%d\n", my_bcomm->my_rank, pbuf->sn, *(Vote*)(pbuf->data));
+                printf("Passive Rank %d: Received decision: %d:%d\n", my_bcomm->my_rank, pbuf->pid, *(Vote*)(pbuf->data));
                 receved_decision++;
                 break;
 
