@@ -21,24 +21,48 @@ enum COM_TAGS {
 
 typedef int ID;
 typedef int Vote;// used for & operation. 1 for yes, 0 for no.
-typedef struct Vote_pool{
+typedef struct Proposal_pool{
     ID pid; // proposal ID, default = -1;
+    int recv_proposal_from;             /* The rank from where I received a proposal, also report votes to this rank. */
+//    int proposal_sent_cnt;
     Vote vote; //accumulated vote, default = 1;
-} vote_pool; //clear when vote result is reported.
+    int votes_needed; //num of votes needed to report to parent, equals to the number of sends of a proposal
+    int votes_recved;
+} proposal_pool; //clear when vote result is reported.
 
-int vote_pool_set(vote_pool* pools, ID k, Vote v){//add new, or merge value
+int proposalPool_init(proposal_pool* pp_in_out){
+    if(!pp_in_out)
+        return -1;
+
+    pp_in_out->pid = -1;
+//    pp_in_out->proposal_sent_cnt = -1;
+    pp_in_out->recv_proposal_from = -1;
+    pp_in_out->vote = 1;
+    pp_in_out->votes_needed = -1;
+    pp_in_out->votes_recved = -1;
+    return 0;
+}
+
+int proposalPool_proposal_add(proposal_pool* pools, proposal_pool* pp_in){//add new, or merge value
+    if(!pools || !pp_in)
+        return -1;
+
     int i = 0;
-    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
-        if(pools[i].pid == k){
-            pools[i].vote &= v;
+    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){//exists, merge
+        if(pools[i].pid == pp_in->pid){
+            pools[i]= *pp_in;
+            //pools[i].proposal_sent_cnt = pp_in->proposal_sent_cnt;
+            pools[i].votes_needed = pp_in->votes_needed;
+
+            pools[i].vote &= pp_in->vote;
             return 0;
         }
     }
+
     if(i == VOTE_POOL_SIZE - 1){// id not found, add new one.
         for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
-            if(pools[i].pid == -1){
-                pools[i].pid = k;
-                pools[i].vote = v;
+            if(pools[i].pid == -1){//first available
+                pools[i]= *pp_in;
                 return 0;
             }
         }
@@ -46,24 +70,67 @@ int vote_pool_set(vote_pool* pools, ID k, Vote v){//add new, or merge value
         if(i == VOTE_POOL_SIZE - 1) //no empty pool for use.
             return -1;
     }
+
     return -2;
 }
 
-int vote_pool_get(vote_pool* pools, ID k, vote_pool* result){
+//update vote_needed field, which is set by _forward(), equals # of sends done on a proposal.
+int proposalPool_proposal_setNeededVoteCnt(proposal_pool* pools, ID k, int cnt){
+    if(!pools)
+        return -1;
+
+    int i = 0;
+    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){//must exists, this happened after a proposal is added by _IAR_process()
+        if(pools[i].pid == k){
+            pools[i].votes_needed = cnt;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int proposalPool_vote_merge(proposal_pool* pools, ID k, Vote v){
+    if(!pools)
+        return -1;
+
+    int i = 0;
+    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){//exists, merge
+        if(pools[i].pid == k){
+            pools[i].votes_needed++;
+            pools[i].vote &= v;
+            return 0;
+        }
+    }
+
+    // id not found, need to add new one, not just merge
+    return -2;
+}
+
+int proposalPool_get(proposal_pool* pools, ID k, proposal_pool* result){
     if(!result)//null
         return -1;
-        int i = 0;
+    int i = 0;
     for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
         if(pools[i].pid == k){
-            result->pid = k;
-            result->vote = pools[i].vote;
+            *result = pools[i];
             return 0;
         }
     }
     return -1;//not found
 }
 
-int vote_pool_rm(vote_pool* pools, ID k){
+int proposalPool_get_index(proposal_pool* pools, ID k){
+    if(!pools)//null
+        return -1;
+    int i = 0;
+    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
+        if(pools[i].pid == k)
+            return i;
+    }
+    return -1;//not found
+}
+
+int proposalPool_rm(proposal_pool* pools, ID k){
     int i = 0;
     for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
         if(pools[i].pid == k){
@@ -75,18 +142,31 @@ int vote_pool_rm(vote_pool* pools, ID k){
     return -1;//not found
 }
 
-int vote_pool_reset(vote_pool* pools) {
+int proposalPools_reset(proposal_pool* pools) {
     for (int i = 0; i <= VOTE_POOL_SIZE - 1; i++) {
         pools[i].pid = -1;
         pools[i].vote = 1;
+        pools[i].recv_proposal_from = -1;
+        pools[i].votes_needed = -1;
+        pools[i].votes_recved = -1;
     }
     return 0;
 }
 
-//struct vpool_link {
-//    vote_pool vp;
-//    vote_pool* next = NULL;
-//};
+//int proposalPool_vote_incre(proposal_pool* pools, ID k){//included in vote_merge
+//    int i = 0;
+//    for(i = 0; i <= VOTE_POOL_SIZE - 1; i++){
+//        if(pools[i].pid == k){
+//            if(pools[i].vote == -1 || pools[i].vote == 0){
+//                pools[i].vote = 1;
+//            }else
+//                pools[i].vote++;
+//            return 0;
+//        }
+//    }
+//    return -1;//not found
+//}
+
 
 typedef enum REQ_STATUS {
     COMPLETED,
@@ -137,12 +217,12 @@ typedef struct BCastCommunicator {
     /* I_all_reduce fields*/
     char* IAR_recv_buf;                 /* IallReduce recv buf */
     Vote vote_my_proposal_no_use;          /* Used only by an proposal-active rank. 1 for agree, 0 for decline. Accumulate votes for a proposal that I just submitted. */
-    vote_pool my_vote_pools[VOTE_POOL_SIZE];        /* To support multiple proposals, use a vote pool for each proposal. Use linked list if concurrent proposal number is large. */
+    proposal_pool my_proposal_pools[VOTE_POOL_SIZE];        /* To support multiple proposals, use a vote pool for each proposal. Use linked list if concurrent proposal number is large. */
     char* my_proposal;                  /* This is used to compare against received proposal, shuold be updated timely */
     char* send_buf_my_vote;
     int recv_vote_cnt;
-    int recv_proposal_from;             /* The rank from where I received a proposal, also report votes to this rank. */
-    int proposal_sent_cnt;              /* How many children received this proposal, it's the number of votes expected. */
+//    int recv_proposal_from;             /* The rank from where I received a proposal, also report votes to this rank. */
+//    int proposal_sent_cnt;              /* How many children received this proposal, it's the number of votes expected. */
 
     /* Operation counters */
     int my_bcast_cnt;
@@ -405,13 +485,13 @@ bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max) {
 
     //my_bcomm->vote_my_proposal_no_use = 1;    /* 1 for agree, 0 for decline, default is 1 */
 
-    vote_pool_reset(my_bcomm->my_vote_pools);
+    proposalPools_reset(my_bcomm->my_proposal_pools);
 
     my_bcomm->my_proposal = (char*)malloc(msg_size_max);                  /* This is used to compare against received proposal, shuold be updated timely */
     my_bcomm->send_buf_my_vote = (char*)malloc(sizeof(int) + sizeof(ID) + sizeof(Vote));
     my_bcomm->recv_vote_cnt = 0;
-    my_bcomm->recv_proposal_from = -1;
-    my_bcomm->proposal_sent_cnt = -1;
+    //my_bcomm->recv_proposal_from = -1;
+    //my_bcomm->proposal_sent_cnt = -1;
 
     /* Post initial receive for this rank */
     MPI_Irecv(my_bcomm->recv_buf[0], msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, my_bcomm->my_comm, &(my_bcomm->irecv_req));
@@ -470,7 +550,11 @@ int bufer_maintain_irecv(bcomm* my_bcomm) {
 
 int _IAllReduce_StarterVote(bcomm* my_bcomm, Vote vote_in, ID pid) {
     PBuf* vote_buf = malloc(sizeof(PBuf));
-    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);\
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    int pp_index = proposalPool_get_index(my_bcomm->my_proposal_pools, pid);
+    if(-1 == pp_index){
+        return -1;
+    }
     vote_buf->data_len = sizeof(Vote);
     vote_buf->data = malloc(vote_buf->data_len);
     vote_buf->pid = pid;
@@ -478,7 +562,7 @@ int _IAllReduce_StarterVote(bcomm* my_bcomm, Vote vote_in, ID pid) {
     unsigned int send_len;
     pbuf_serialize(vote_buf->pid, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-    MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+    MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->my_proposal_pools[pp_index].recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     bufer_maintain_irecv(my_bcomm);
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
@@ -502,18 +586,27 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
         pbuf_deserialize(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index], vote_buf);// + sizeof(int). IAR_VOTE doepid't need origin
 
         //my_bcomm->vote_my_proposal_no_use &= *(Vote*)(vote_buf->data);//get received vote
-        vote_pool_set(my_bcomm->my_vote_pools, vote_buf->pid, *(Vote*)(vote_buf->data));
+        proposal_pool pp;
+        //check if exist, if yes, increase it by merging. if no, it's an error, since a proposal_pool should exist before a corresponding vote arrive.
+        if(0 != proposalPool_vote_merge(my_bcomm->my_proposal_pools, vote_buf->pid, *(Vote*)(vote_buf->data))){
+            printf("Function %s:%u - rank %d: can't merge vote, proposal not exists. \n", __func__, __LINE__, my_bcomm->my_rank);
+            return -1;
+        }
+
+        int p_index = proposalPool_get_index(my_bcomm->my_proposal_pools, vote_buf->pid);
+        if(-1 == p_index){
+            printf("Function %s:%u - rank %d: can't find proposal. \n", __func__, __LINE__, my_bcomm->my_rank);
+            return -1;
+        }
+
+
 
         //printf("%s:%u - rank %03d received a vote: %d, now my vote = %d\n", __func__, __LINE__, my_bcomm->my_rank, *(Vote*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(SN)+ sizeof(unsigned int)), my_bcomm->my_vote);
-        if(my_bcomm->recv_vote_cnt == my_bcomm->proposal_sent_cnt){//all votes are received, report to predecessor
-            vote_pool vp;
-            if(vote_pool_get(my_bcomm->my_vote_pools, vote_buf->pid, &vp) != 0)
-                return -1;
-
-            *(Vote*) (vote_buf->data) = vp.vote;
+        if(my_bcomm->my_proposal_pools[p_index].votes_recved == my_bcomm->my_proposal_pools[p_index].votes_needed){//all votes are received, report to predecessor
+            *(Vote*) (vote_buf->data) = my_bcomm->my_proposal_pools[p_index].vote;
             unsigned int send_len;
             pbuf_serialize(vote_buf->pid, sizeof(Vote), vote_buf->data, my_bcomm->send_buf_my_vote, &send_len);
-            MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+            MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->my_proposal_pools[p_index].recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
             bufer_maintain_irecv(my_bcomm);
             pbuf_free(vote_buf);
             return 3;//received all votes
@@ -531,25 +624,24 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
 
         int origin = get_origin((char *)my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index]);
         printf("%s:%u - rank = %03d, received a proposal from rank %d.\n", __func__, __LINE__, my_bcomm->my_rank, status.MPI_SOURCE);
-        my_bcomm->recv_proposal_from = status.MPI_SOURCE;
-        my_bcomm->proposal_sent_cnt = 0;
+        //my_bcomm->recv_proposal_from = status.MPI_SOURCE;
+        //my_bcomm->proposal_sent_cnt = 0;
 
         PBuf* pbuf = malloc(sizeof(PBuf));
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
         pbuf_deserialize(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), pbuf);
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-        if (0 == proposal_agree(my_bcomm->my_proposal, pbuf->data)) {//local declined, up stream to predecessor
+        if (0 == proposal_agree(my_bcomm->my_proposal, pbuf->data)) {//local declined, up stream to the parent, no need of collecting votes.
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-
             //set vote
             Vote tmp_v = 0;
             //my_bcomm->vote_my_proposal_no_use = tmp_v;
-            vote_pool_set(my_bcomm->my_vote_pools, pbuf->pid, 0);
+            //proposalPool_vote_merge(my_bcomm->my_vote_pools, pbuf->pid, 0);
 
             unsigned int send_len;
             pbuf_serialize(pbuf->pid, sizeof(Vote), (char*)&(tmp_v), my_bcomm->send_buf_my_vote, &send_len);
 
-            MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);// sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+            MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, status.MPI_SOURCE, IAR_VOTE, my_bcomm->my_comm);// sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
 
             bufer_maintain_irecv(my_bcomm);
@@ -557,21 +649,26 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
             return 1;//proposal declined locally, reported
         }else{//local approved
 
-            if(IS_IAR_STARTER == 0){//leaf rank vote yes
+            if(IS_IAR_STARTER == 0){//Not an IAR starter, downstream now
                 memcpy(my_bcomm->send_buf_my_vote, my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), sizeof(ID));//copy pid
 
                 Vote tmp_v = 1;
                 //my_bcomm->vote_my_proposal_no_use = tmp_v;
-                vote_pool_set(my_bcomm->my_vote_pools, pbuf->pid, 0);
+                proposal_pool pp;
+                proposalPool_init(&pp);
+                pp.pid = pbuf->pid;
+                pp.recv_proposal_from = status.MPI_SOURCE;
+                pp.votes_recved = 0;
+                pp.vote = 1;
 
                 unsigned int send_len;
                 pbuf_serialize(*(ID*)(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int)), sizeof(Vote), (char*)&(tmp_v), my_bcomm->send_buf_my_vote, &send_len);
 
                 printf("%s:%u - rank = %03d, non-starter, leaf rank votes yes \n", __func__, __LINE__, my_bcomm->my_rank);
-                MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, my_bcomm->recv_proposal_from, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
+                MPI_Send(my_bcomm->send_buf_my_vote, send_len, MPI_CHAR, status.MPI_SOURCE, IAR_VOTE, my_bcomm->my_comm);//sizeof(SN) + sizeof(unsigned int) + sizeof(Vote)
                 printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
             }
-
+            // need to check with compete() out side
             if(my_bcomm->send_channel_cnt != 0){//non leaf rank
                 if(check_passed_origin(my_bcomm, origin, my_bcomm->send_list[0]) == 0)//pass origin, this is a temperory leaf rank
                     return 0;// return 0 will be caught by _forward();
@@ -637,10 +734,25 @@ int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out) {
         } /* end else */
 
         /* Update # of outstanding messages being sent for bcomm */
-        my_bcomm->fwd_send_cnt[my_bcomm->curr_recv_buf_index] = send_cnt;
+        my_bcomm->fwd_send_cnt[my_bcomm->curr_recv_buf_index] = send_cnt;//???
 
-        if (my_bcomm->proposal_sent_cnt == 0)
-            my_bcomm->proposal_sent_cnt = send_cnt;
+        if(status.MPI_TAG == IAR_PROPOSAL){
+            PBuf* pbuf = malloc(sizeof(PBuf));
+            pbuf_deserialize(recv_buf + sizeof(int), pbuf);
+
+            int pp_index =  proposalPool_get_index(my_bcomm->my_proposal_pools, pbuf->pid);
+            if(-1 == pp_index){
+                return -1;
+            }
+            my_bcomm->my_proposal_pools[pp_index].votes_needed = send_cnt;
+
+        }
+
+//        if (my_bcomm->proposal_sent_cnt == 0)
+//            my_bcomm->proposal_sent_cnt = send_cnt;
+
+
+
     } /* end if */
 
     /* Return pointer to user data in current receive buffer */
@@ -781,6 +893,7 @@ int proposal_compete(char* p1, char* p2){
 }
 
 int iAllReduceStart(bcomm* my_bcomm, char* my_proposal, unsigned long prop_size, ID my_proposal_id){
+    IS_IAR_STARTER = 1;
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     char* recv_buf = malloc(2* MSG_SIZE_MAX);
     //SN pid = 1234;//make_pid(my_bcomm);
@@ -790,7 +903,7 @@ int iAllReduceStart(bcomm* my_bcomm, char* my_proposal, unsigned long prop_size,
         return -1;
     }
 
-    if(vote_pool_set(my_bcomm->my_vote_pools, my_proposal_id, 1) != 0)
+    if(proposalPool_vote_merge(my_bcomm->my_proposal_pools, my_proposal_id, 1) != 0)
         return -1;
 
     bcast(my_bcomm, IAR_PROPOSAL);//IAR_PROPOSAL
