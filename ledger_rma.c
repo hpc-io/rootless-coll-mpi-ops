@@ -572,10 +572,13 @@ int _IAllReduce_StarterVote(bcomm* my_bcomm, Vote vote_in, ID pid) {
     //PBuf* vote_buf = malloc(sizeof(PBuf));
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     int pp_index = proposalPool_get_index(my_bcomm->my_proposal_pools, pid);
-    printf("%s:%u - rank = %03d: starter send vote %d: index = %d, send to rank %d\n", __func__, __LINE__, my_bcomm->my_rank, vote_in, pp_index, my_bcomm->my_proposal_pools[pp_index].recv_proposal_from);
+
     if(-1 == pp_index){
+        printf("%s:%u - rank = %03d: starter can't find pid in my proposal pools, pid = %d, index = %d\n", __func__, __LINE__, my_bcomm->my_rank,pid, pp_index);
         return -1;
     }
+
+    printf("%s:%u - rank = %03d: starter send vote for pid = %d, vote = %d index = %d, send to rank %d\n", __func__, __LINE__, my_bcomm->my_rank, pid, vote_in, pp_index, my_bcomm->my_proposal_pools[pp_index].recv_proposal_from);
 //    vote_buf->data_len = 0;
 //    vote_buf->data = NULL;//malloc(vote_buf->data_len);
 //    memcpy(vote_buf->data, &vote_in, sizeof(Vote));
@@ -692,7 +695,7 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
         pbuf_deserialize(my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index] + sizeof(int), pbuf);
 
         int origin = get_origin((char *)my_bcomm->recv_buf[my_bcomm->curr_recv_buf_index]);
-        printf("%s:%u - rank = %03d, received a proposal from rank %d:(%d:%s)\n", __func__, __LINE__, my_bcomm->my_rank, status.MPI_SOURCE, pbuf->pid, pbuf->data);
+        printf("%s:%u - rank = %03d, received a proposal from rank %d:(%d:%s), data_len = %d\n", __func__, __LINE__, my_bcomm->my_rank, status.MPI_SOURCE, pbuf->pid, pbuf->data, pbuf->data_len);
         //my_bcomm->recv_proposal_from = status.MPI_SOURCE;
         //my_bcomm->proposal_sent_cnt = 0;
 
@@ -746,16 +749,29 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
                     pbuf_free(pbuf);
                     return 4;//leaf rank agreed, no forward, continue.
                 }else{//non leaf rank, non starter, always forward proposals and decisions
-                    bufer_maintain_irecv(my_bcomm);
+                    //bufer_maintain_irecv(my_bcomm);
                     pbuf_free(pbuf);
                     printf("%s:%u - rank = %03d: non-leaf forwarding proposal\n", __func__, __LINE__, my_bcomm->my_rank);
                     return 0;
                 }
 
             } else { // starter, all ranks.
+
+                   proposal_pool pp;
+                   proposalPool_init(&pp);
+                   pp.pid = pbuf->pid;
+                   pp.recv_proposal_from = status.MPI_SOURCE;
+                   pp.votes_recved = 0;
+
+
+
+
                 int winner = proposal_compete(my_bcomm->my_proposal, pbuf->data);
                 if(winner == 0){// I win, vote no to others.
-                    printf("%s:%u - rank = %03d: starter: I win, vote no to others.\n", __func__, __LINE__, my_bcomm->my_rank);
+                    pp.vote = 0;
+                    //non-leaf rank need to report after collecting all children votes, handled by IAR_VOTE tag branch.
+                    proposalPool_proposal_add(my_bcomm->my_proposal_pools, &pp);
+                    printf("%s:%u - rank = %03d: starter: I win (%s), vote no to others(%s).\n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->my_proposal, pbuf->data);
                     _IAllReduce_StarterVote(my_bcomm, 0, pbuf->pid);
                     bufer_maintain_irecv(my_bcomm);
                     pbuf_free(pbuf);
@@ -766,32 +782,30 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
                     my_bcomm->my_own_proposal.vote = 0;
                     my_bcomm->my_own_proposal.votes_recved = my_bcomm->my_own_proposal.votes_needed; //condition to end loop
                     //_IAllReduce_bacast_decision(my_bcomm, my_bcomm->my_own_proposal.pid, NULL, 0, 0);
-
-
-                    // add proposal
-                    proposal_pool pp;
-                    proposalPool_init(&pp);
-                    pp.pid = pbuf->pid;
-                    pp.recv_proposal_from = status.MPI_SOURCE;
-                    pp.votes_recved = 0;
                     pp.vote = 1;
-
-
                     //non-leaf rank need to report after collecting all children votes, handled by IAR_VOTE tag branch.
                     proposalPool_proposal_add(my_bcomm->my_proposal_pools, &pp);
+
+                    // add proposal
+
 
                     int pindex = proposalPool_get_index(my_bcomm->my_proposal_pools,pbuf->pid);
                     printf("%s:%u - rank = %03d, non-starter, non-leaf rank added a propolsal, pid = %d \n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->my_proposal_pools[pindex].pid);
 
                     if(my_bcomm->send_channel_cnt != 0){//non leaf, forward
 
-                        if(check_passed_origin(my_bcomm, origin, my_bcomm->send_list[0]) == 0){//pass origin, this is a temperory leaf rank
+                        if(check_passed_origin(my_bcomm, origin, my_bcomm->send_list[0]) == 0){//no passed origin, forward and wait for children's vote
                             printf("%s:%u - rank = %03d: starter: others' win, non-leaf forwarding...\n", __func__, __LINE__, my_bcomm->my_rank);
                             bufer_maintain_irecv(my_bcomm);
                             pbuf_free(pbuf);
                             return 0;// others' proposal will be forwarded. eturn 0 will be caught by _forward();
-                        } else {
+                        } else {//passed, no forward but need to vote
                             printf("%s:%u - rank = %03d: starter: others' win, non-leaf can't forward, return 9\n", __func__, __LINE__, my_bcomm->my_rank);
+                            if(0 != _IAllReduce_StarterVote(my_bcomm, 1, pbuf->pid)){
+                                bufer_maintain_irecv(my_bcomm);
+                                pbuf_free(pbuf);
+                                return 9;//unknown error
+                            }
                             bufer_maintain_irecv(my_bcomm);
                             pbuf_free(pbuf);
                             return 9;//unknown error
@@ -1031,6 +1045,7 @@ int proposal_agree(char* p1, char* p2){
 
 //Return 0 if p1 wins, otherwise return 1.
 int proposal_compete(char* p1, char* p2){
+
     if(p1[0] >= p2[0]){
         return 1;//0
     }else
@@ -1086,15 +1101,16 @@ int iAllReduceStart(bcomm* my_bcomm, char* my_proposal, unsigned long prop_size,
         }
         if(ret != -1)
             printf("%s:%u - rank = %03d, starter: irecv() = %d\n", __func__, __LINE__, my_bcomm->my_rank, ret);
-        ID other_id = *(ID*)recv_buf;
+
         //ret == 3: all votes are received
         if(ret == 3 || ret == 2 || ret == 1){//received all votes for my proposals: note that vote won't be forwarded, so they all reach the destination directly.
             recv_vote_cnt++;
-
+            PBuf* pbuf = malloc(sizeof(PBuf));
+            pbuf_deserialize(recv_buf, pbuf);
             //votes_result &= my_bcomm->vote_my_proposal_no_use;// nouse
             //vote_pool_set(my_bcomm->my_vote_pools, other_id, ) no need, it's updated by irecv.
 
-            printf("%s:%u - rank = %03d, received a vote, recv_vote_cnt = %d, need %d in total.\n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->my_own_proposal.votes_recved, my_bcomm->my_own_proposal.votes_needed);
+            printf("%s:%u - rank = %03d, received a vote(ret = 1,2 or 3), pid = %d, vote = %d, recv_vote_cnt = %d, need %d in total.\n", __func__, __LINE__, pbuf->pid, pbuf->vote, my_bcomm->my_rank, my_bcomm->my_own_proposal.votes_recved, my_bcomm->my_own_proposal.votes_needed);
         }
         if ( ret == 0 || ret == 4) {//make_progress() == 0, received and forwarded something: proposal or decision, won't be a vote.
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
