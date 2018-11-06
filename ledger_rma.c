@@ -16,6 +16,7 @@ enum COM_TAGS {
     IAR_PROPOSAL,
     IAR_VOTE, /* vote for I_All_Reduce */
     IAR_DECISION, /* Final result */
+    IAR /* for teardowon use */
 
 };
 
@@ -1034,7 +1035,7 @@ int bcast(bcomm* my_bcomm, enum COM_TAGS tag) {
     return 0;
 }
 
-int bcomm_teardown(bcomm* my_bcomm) {
+int bcomm_teardown(bcomm* my_bcomm, enum COM_TAGS tag) {
     int total_bcast = 0;
     MPI_Request req;
     MPI_Status stat_out1, stat_out2;
@@ -1068,22 +1069,27 @@ int bcomm_teardown(bcomm* my_bcomm) {
 
     printf("%s:%u - rank = %03d, bcomm_teardown: MPI_Iallreduce done. my_bcomm->bcast_recv_cnt = %d, my_bcomm->my_bcast_cnt = %d, total_bcast = %d\n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->bcast_recv_cnt, my_bcomm->my_bcast_cnt, total_bcast);
     /* Forward messages until we've received all the broadcasts */
-//    while (my_bcomm->bcast_recv_cnt + my_bcomm->my_bcast_cnt < total_bcast){
-//        //recv_forward(my_bcomm, &recv_buf, NULL);
-//        irecv_wrapper(my_bcomm, &recv_buf, NULL);
-//    }
-//    /* If there are outstanding messages being forwarded, wait for them now */
-//    if(my_bcomm->fwd_send_cnt[0] > 0) {
-//        MPI_Waitall(my_bcomm->fwd_send_cnt[0], my_bcomm->fwd_isend_reqs[0], my_bcomm->fwd_isend_stats[0]);
-//        my_bcomm->fwd_send_cnt[0] = 0;
-//    } /* end if */
-//    if(my_bcomm->fwd_send_cnt[1] > 0) {
-//        MPI_Waitall(my_bcomm->fwd_send_cnt[1], my_bcomm->fwd_isend_reqs[1], my_bcomm->fwd_isend_stats[1]);
-//        my_bcomm->fwd_send_cnt[1] = 0;
-//    } /* end if */
+    if(tag == BCAST){
+        while (my_bcomm->bcast_recv_cnt + my_bcomm->my_bcast_cnt < total_bcast){
+            //recv_forward(my_bcomm, &recv_buf, NULL);
+            irecv_wrapper(my_bcomm, &recv_buf, NULL);
+        }
+        /* If there are outstanding messages being forwarded, wait for them now */
+        if(my_bcomm->fwd_send_cnt[0] > 0) {
+            MPI_Waitall(my_bcomm->fwd_send_cnt[0], my_bcomm->fwd_isend_reqs[0], my_bcomm->fwd_isend_stats[0]);
+            my_bcomm->fwd_send_cnt[0] = 0;
+        } /* end if */
+        if(my_bcomm->fwd_send_cnt[1] > 0) {
+            MPI_Waitall(my_bcomm->fwd_send_cnt[1], my_bcomm->fwd_isend_reqs[1], my_bcomm->fwd_isend_stats[1]);
+            my_bcomm->fwd_send_cnt[1] = 0;
+        } /* end if */
 
-    /* Retrieve the # of broadcasts we've received */
-    recv_cnt = my_bcomm->bcast_recv_cnt;
+        /* Retrieve the # of broadcasts we've received */
+        recv_cnt = my_bcomm->bcast_recv_cnt;
+    }
+
+
+
 
     /* Cancel outstanding non-blocking receive */
     MPI_Cancel(&my_bcomm->irecv_req);
@@ -1378,7 +1384,7 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int starter_1, int starter_2
     }
     printf("Rank %d I'm done, waiting at barrier now.\n", my_bcomm->my_rank);
 
-    bcomm_teardown(my_bcomm);
+    bcomm_teardown(my_bcomm, IAR);
     //MPI_Barrier(my_bcomm->my_comm);
 
     int my_rank = -1;
@@ -1542,7 +1548,7 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     }
 
     my_rank = my_bcomm->my_rank;
-    recv_msg_cnt = bcomm_teardown(my_bcomm);
+    recv_msg_cnt = bcomm_teardown(my_bcomm, BCAST);
 
     time_end = get_time_usec();
     phase_1 = time_end - time_start;
