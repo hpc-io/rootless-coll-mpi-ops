@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#include "progress_engine.h"
+//#include "progress_engine.h"
 
 #define MSG_SIZE_MAX 32768
 #define PROPOSAL_POOL_SIZE 16 //maximal concurrent proposal supported
@@ -43,6 +43,32 @@ typedef struct Proposal_state{
 /* ----------------------------------------------------------------------- */
 /* ----------------- refactoring for progress engine BEGIN --------------- */
 
+enum State_BC {
+    NEW, // I_recv not completed yet
+    NOT_APP_RECV_STILL_FORWARDING, // need appl to look at buffer, still forwarding to children
+    APP_RECV_STILL_FORWARDING,  //app has recevied, still forwarding to children
+    NOT_APP_RECV_DONE_FORWARDING, // need appl to look at buffer, done forwardiing to children
+    APP_RECV_DONE_FORWARDING,  //app has recevied, done forwarding to children
+    APP_RECV_AND_FINISHED_STILL_FORWARDING,
+    // appl finished looking at buffer, still forwarding buffer to children
+    APP_RECV_AND_FINISHED_DONE_FORWARDING
+    // app finished with buffer, done forwadin to children
+};
+
+// IAR is built on top of bcast, so it's not aware of BC related state changes, only cares about proposal state change.
+enum State_IAR {
+
+    //Proposal processing states
+    NEW_START_WAIT_VOTE, //the rank started a new proposal, waiting for votes
+
+    PASSIVE_RECV_APPROVED, // passive leaf rank recved a new proposal and approved, voting yes
+    PASSIVE_RECV_WAIT_VOTE, // passive non-leaf rank received a new proposal, and approved locally, in forwarding and will wait for children votes
+    PASSIVE_RECV_DECLINED, // passive newly received proposal get declined, and is voting no
+
+    ACTIVE_RECV_I_WIN,  //active rank received a conflicting proposal, and (local) wins the compete(), voting no
+    ACTIVE_RECV_I_LOSE, //lose compete, voting yes
+
+};
 
 typedef struct Msg_state {
   //Kind_t kind;   // ‘a’, ‘b’. ‘c’, etc.
@@ -53,13 +79,14 @@ typedef struct Msg_state {
     } state;
 } Msg_state;
 
-typedef struct bcomm_BC_msg {
+typedef struct bcomm_BC_msg bcomm_BC_msg_t;
+struct bcomm_BC_msg {
     char buf[MSG_SIZE_MAX];  // Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
     Msg_state stat;
     MPI_Request req;
     bcomm_BC_msg_t *next_forwarding, *prev_forwarding;//still in forwarding
     bcomm_BC_msg_t *next_app_recv, *prev_app_recv;//ready for user to look at the buffer
-}bcomm_BC_msg_t;
+};
 
 typedef struct bcomm_IAR_msg {
     char buf[MSG_SIZE_MAX];    // Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
@@ -88,34 +115,7 @@ struct bcomm_t_new {
             *IAR_msg_app_queue_tail;
 };
 
-enum State_BC {
-    NEW, // I_recv not completed yet
-    NOT_APP_RECV_STILL_FORWARDING, // need appl to look at buffer, still forwarding to children
-    APP_RECV_STILL_FORWARDING,  //app has recevied, still forwarding to children
-    NOT_APP_RECV_DONE_FORWARDING, // need appl to look at buffer, done forwardiing to children
-    APP_RECV_DONE_FORWARDING,  //app has recevied, done forwarding to children
-    APP_RECV_AND_FINISHED_STILL_FORWARDING,
-    // appl finished looking at buffer, still forwarding buffer to children
-    APP_RECV_AND_FINISHED_DONE_FORWARDING
-    // app finished with buffer, done forwadin to children
-};
 
-// IAR is built on top of bcast, so it's not aware of BC related state changes, only cares about proposal state change.
-enum State_IAR {
-
-    //Proposal processing states
-    NEW_START_WAIT_VOTE, //the rank started a new proposal, waiting for votes
-
-    PASSIVE_RECV_APPROVED, // passive leaf rank recved a new proposal and approved, voting yes
-    PASSIVE_RECV_WAIT_VOTE, // passive non-leaf rank received a new proposal, and approved locally, in forwarding and will wait for children votes
-    PASSIVE_RECV_DECLINED, // passive newly received proposal get declined, and is voting no
-
-    ACTIVE_RECV_I_WIN,  //active rank received a conflicting proposal, and (local) wins the compete(), voting no
-    ACTIVE_RECV_I_LOSE, //lose compete, voting yes
-
-
-
-};
 
 /* ------- Progress engine overview -------
  *
@@ -128,9 +128,9 @@ enum State_IAR {
  *  process_$OP_queued_msg(msg) functionality: state transferring function
  *      - check state,
  *      - do operation,
- *      - update state, including updating/removing msg
+ *      - bonus: update state, including updating/removing msg, time msg stay in queue
  *
- *
+ *  collect stats like num of msgs received/dispatched
  *      */
 int make_progress_BC(bcomm_BC_msg_t* infra_queue_head, bcomm_BC_msg_t* infra_queue_tail,
                     bcomm_BC_msg_t* app_queue_head, bcomm_BC_msg_t* app_queue_tail);
