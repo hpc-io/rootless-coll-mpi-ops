@@ -33,8 +33,70 @@ typedef struct Proposal_state{
     int votes_recved;
 } proposal_state; //clear when vote result is reported.
 
+typedef enum REQ_STATUS {
+    COMPLETED,
+    IN_PROGRESS,
+    FAILED
+}REQ_STATUS;
 
+typedef struct bcomm_token_t {
+    ID req_id;
+    REQ_STATUS req_stat;
+    bool completed;
+    bool vote_result;
+    struct bcomm_token_t* next;
+} bcomm_token_t;
 
+typedef struct BCastCommunicator {
+    /* MPI fields */
+    MPI_Comm my_comm;                   /* MPI communicator to use */
+    int my_rank;                        /* Local rank value */
+    int world_size;                     /* # of ranks in communicator */
+
+    /* Message fields */
+    size_t msg_size_max;                /* Maximum message size */
+    void *user_send_buf;                /* Buffer for user to send messages in */
+
+    /* Skip ring fields */
+    int my_level;                       /* Level of rank in ring */
+    int last_wall;                      /* The closest rank that has higher level than rank world_size - 1 */
+    int world_is_power_of_2;            /* Whether the world size is a power of 2 */
+
+    /* Send fields */
+    int send_channel_cnt;               /* # of outgoing channels from this rank */
+    int send_list_len;                  /* # of outgoing ranks to send to */
+    int* send_list;                     /* Array of outgoing ranks to send to */
+    void *send_buf;                     /* Buffer for sending messages */
+    int fwd_send_cnt[2];                /* # of outstanding non-blocking forwarding sends for each receive buffer */
+    MPI_Request* fwd_isend_reqs[2];     /* Array for non-blocking forwarding send requests for each receive buffer */
+    MPI_Status* fwd_isend_stats[2];     /* Array for non-blocking forwarding send statuses for each receive buffer */
+    int bcast_send_cnt;                 /* # of outstanding non-blocking broadcast sends */
+    MPI_Request* bcast_isend_reqs;      /* Array for non-blocking broadcast send requests */
+    MPI_Status* bcast_isend_stats;      /* Array for non-blocking broadcast send statuses */
+
+    /* Receive fields */
+    MPI_Request irecv_req;              /* Request for incoming messages */
+    unsigned curr_recv_buf_index;             /* Current buffer for receive */
+    char* recv_buf[2];                  /* Buffers for incoming messages */
+    
+    /* I_all_reduce fields*/
+    bool IAR_active;                    /* Set true if it's doing IAR, and set false after IAR is done.*/
+    char* IAR_recv_buf;                 /* IallReduce recv buf */
+    Vote vote_my_proposal_no_use;          /* Used only by an proposal-active rank. 1 for agree, 0 for decline. Accumulate votes for a proposal that I just submitted. */
+    proposal_state my_own_proposal;      /* Set only when I'm a IAR starter, maintain status for my own proposal */
+    proposal_state proposal_state_pool[PROPOSAL_POOL_SIZE];        /* To support multiple proposals, use a vote pool for each proposal. Use linked list if concurrent proposal number is large. */
+    char* my_proposal;                  /* This is used to compare against received proposal, should be updated timely */
+    char* send_buf_my_vote;
+    int recv_vote_cnt;
+//    int recv_proposal_from;             /* The rank from where I received a proposal, also report votes to this rank. */
+//    int proposal_sent_cnt;              /* How many children received this proposal, it's the number of votes expected. */
+
+    /* Operation counters */
+    int my_bcast_cnt;
+    int bcast_recv_cnt;
+    /* Request progress status*/
+    bcomm_token_t* req_stat;
+} bcomm;
 
 
 
@@ -83,37 +145,44 @@ typedef struct bcomm_BC_msg bcomm_BC_msg_t;
 struct bcomm_BC_msg {
     char buf[MSG_SIZE_MAX];  // Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
     Msg_state stat;
-    MPI_Request req;
-    bcomm_BC_msg_t *next_forwarding, *prev_forwarding;//still in forwarding
-    bcomm_BC_msg_t *next_app_recv, *prev_app_recv;//ready for user to look at the buffer
+    MPI_Request bc_req; //filled when repost irecv
+    bcomm_BC_msg_t *next, *prev;//still in forwarding
+    //bcomm_BC_msg_t *next_app_recv, *prev_app_recv;//ready for user to look at the buffer
 };
 
-typedef struct bcomm_IAR_msg {
+typedef struct bcomm_IAR_msg bcomm_IAR_msg_t;
+struct bcomm_IAR_msg {
     char buf[MSG_SIZE_MAX];    // Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
     ID proposal_id;
     Msg_state stat;
-    MPI_Request req;
-
-    bcomm_BC_msg_t *next, *prev;
-}bcomm_IAR_msg_t;
-
-
-struct bcomm_t_new {
-    bcomm_BC_msg_t *new_bcast; //post irecv with tag = bcast
-    bcomm_IAR_msg_t *new_IAR_prop; //post irecv with tag = IAR
-    bcomm_BC_msg_t // received msg for forwarding -- infra
-            *bcast_msg_forwarding_queue_head,
-            *bcast_msg_forwarding_queue_tail;
-    bcomm_BC_msg_t // received msg for app to read.
-            *bcast_msg_app_recv_queue_head,
-            *bcast_msg_app_recv_queue_tail;
-    bcomm_IAR_msg_t // -- for infra use
-            *IAR_msg_queue_head,
-            *IAR_msg_queue_tail;
-    bcomm_IAR_msg_t // for app use, probably don’t need this queue, if we make callbacks to user function pointer
-            *IAR_msg_app_queue_head,
-            *IAR_msg_app_queue_tail;
+    MPI_Request iar_req;//filled when repost irecv
+    bcomm_IAR_msg_t *next, *prev;
 };
+
+
+typedef struct bcomm_progress_engine {
+    bcomm* my_bcomm;
+    bcomm_BC_msg_t *BC_buff_q; //buffs for bcast; after recv completion, repost irecv with tag = bcast, and move to fwd and/or app_rcv queue
+    bcomm_IAR_msg_t *IAR_buff_q; //post irecv with tag = IAR
+
+    bcomm_BC_msg_t // received msg for forwarding -- infra
+            *BC_fwd_q_head,
+            *BC_fwd_q_tail;
+    bcomm_BC_msg_t // received msg for app to read, then remove.
+            *BC_app_rcv_q_head,
+            *BC_app_rcv_q_tail;
+
+    bcomm_IAR_msg_t // -- msgs moved from receving buff, need process for infra use
+            *IAR_infra_q_head,
+            *IAR_infra_q_tail;
+    bcomm_IAR_msg_t // for app use, probably don’t need this queue, if we make callbacks to user function pointer
+                    // -- msgs moved from receving buff, intermittent or final results, needs the app to take action.
+            *IAR_app_q_head,
+            *IAR_app_q_tail;
+
+//    MPI_Request bc_req;
+//    MPI_Request iar_rea;
+}bcomm_engine_t;
 
 
 
@@ -132,14 +201,177 @@ struct bcomm_t_new {
  *
  *  collect stats like num of msgs received/dispatched
  *      */
-int make_progress_BC(bcomm_BC_msg_t* infra_queue_head, bcomm_BC_msg_t* infra_queue_tail,
-                    bcomm_BC_msg_t* app_queue_head, bcomm_BC_msg_t* app_queue_tail);
-int process_BC_queued_msg(bcomm_BC_msg_t* msg);
+
+
+
+int make_progress_BC(bcomm_engine_t* eng); //bcomm_BC_msg_t* q_head_infra, bcomm_BC_msg_t* q_tail_infra,bcomm_BC_msg_t* q_head_app, bcomm_BC_msg_t* q_tail_app
+
+//check, allocate, append to tail, repost
+int _bc_new_msg_handler(bcomm_engine_t* eng, bcomm_BC_msg_t* msg_buf);
+
+int _post_bc_irecv(bcomm_engine_t* eng, bcomm_BC_msg_t* msg_buf);
+
+// process msg in fwd queue
+int _bc_process_fwd_q_msg(bcomm_engine_t* en, bcomm_BC_msg_t* msg);
+
+// why not just fwd right after find completion??? fwd only has 2 states: ready, gone.
+int _bc_cp_to_fwd(bcomm_engine_t* eng, bcomm_BC_msg_t* msg);
+
+int _bc_mv_to_app_pickup(bcomm_engine_t* eng, bcomm_BC_msg_t* msg);
+
+// Finally release a msg along with it's buffer, use when 1. after app pick up a msg, and 2. after a msg is forwarded
+int _bc_rm_msg(bcomm_engine_t* eng, bcomm_BC_msg_t* msg);
 
 //Check BC irecv, loop 2 IAR msg queues
-int make_progress_IAR(bcomm_IAR_msg_t* infra_queue_head, bcomm_IAR_msg_t* infra_queue_tail,
-                    bcomm_IAR_msg_t* app_queue_head, bcomm_IAR_msg_t* app_queue_tail);
-int process_IAR_queued_msg(bcomm_IAR_msg_t* msg);
+int make_progress_IAR(bcomm_engine_t* en);
+int _iar_new_msg_handler(bcomm_engine_t* eng, bcomm_BC_msg_t* msg_buf);//check, allocate, append to tail, repost
+int _iar_process_infra_q_msg(bcomm_IAR_msg_t* msg);//process msg in infra queue: proposal_agree(), compete(), etc.,.
+int _iar_cp_to_fwd(bcomm_engine_t* eng, bcomm_IAR_msg_t* msg);
+int _iar_cp_to_app_pickup(bcomm_engine_t* eng, bcomm_IAR_msg_t* msg);
+int _iar_rm_msg(bcomm_engine_t* eng, bcomm_IAR_msg_t* msg);
+
+int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out);//old version
+
+
+int make_progress_BC(bcomm_engine_t* eng) {
+    //
+    bcomm_BC_msg_t* cur_buf = eng->BC_buff_q;
+    bcomm_BC_msg_t* cur_fwd = eng->BC_fwd_q_head;
+    bcomm_BC_msg_t* cur_app_rcv = eng->BC_app_rcv_q_head;
+
+    while(cur_buf != NULL) {
+        _bc_new_msg_handler(eng, cur_buf);
+        cur_buf = cur_buf->next;
+    }
+
+    while(cur_fwd != eng->BC_fwd_q_tail) {
+        _bc_process_fwd_q_msg(eng, cur_fwd);
+        cur_fwd = cur_fwd->next;
+    }
+
+//    while(cur_app_rcv != eng->BC_app_rcv_q_tail) {
+//
+//        cur_app_rcv = cur_app_rcv->next;
+//    }
+
+    return -1;
+}
+
+int _bc_new_msg_handler(bcomm_engine_t* eng, bcomm_BC_msg_t* msg_buf) {
+    if(!msg_buf)
+        return -1;
+
+    MPI_Status rcv_stat;
+    int completed = 0;
+    MPI_Test(&msg_buf->bc_req, &completed, &rcv_stat);
+
+    // allocate new cur_msg block for next cur_msg.
+    if(completed) {
+        // Allocate new msg buf
+        bcomm_BC_msg_t* next_msg = malloc(sizeof(bcomm_BC_msg_t));
+        next_msg->next = NULL;
+        bcomm_BC_msg_t* cur = eng->BC_buff_q;
+
+        // Append to the end of buff queue
+        while(cur->next != NULL) {
+            cur = cur->next;
+        }
+        cur->next = next_msg;
+        next_msg->prev = cur;
+
+        // Repost irecv, use buff in the newly allocated msg
+        _post_bc_irecv(eng, next_msg);
+
+        // Move to fwd and copy to app_pickup
+
+        // Unlink from buf queue
+        if(msg_buf->prev != NULL) {
+            msg_buf->prev->next = msg_buf->next;
+            if(msg_buf->next != NULL)
+                msg_buf->next->prev = msg_buf->prev;
+        } else { // msg_buf is the head, so prev is NULL
+            eng->BC_buff_q = msg_buf->next;
+        }
+
+        //in old version _forward() function will decide if to forward
+        _bc_cp_to_fwd(eng, msg_buf); //why not to fwd directly here?
+        //_forward();//logic is same as the old version
+
+        _forward(eng->my_bcomm, rcv_stat, NULL);
+
+        // Reuse the data, move to app pickup queue, don't need to release now.
+        _bc_mv_to_app_pickup(eng, msg_buf);
+
+    }
+    // do process
+
+
+    return -1;
+}
+
+int _post_bc_irecv(bcomm_engine_t* eng, bcomm_BC_msg_t* msg_buf) {
+    MPI_Irecv(msg_buf->buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, eng->my_bcomm->my_comm, &(msg_buf->bc_req));
+    return -1;
+}
+
+int _bc_mv_to_app_pickup(bcomm_engine_t* eng, bcomm_BC_msg_t* msg_buf) {
+    msg_buf->prev = eng->BC_app_rcv_q_tail->prev;
+    eng->BC_app_rcv_q_tail->prev->next = msg_buf;
+    msg_buf->next = eng->BC_app_rcv_q_tail;
+    eng->BC_app_rcv_q_tail->prev = msg_buf;
+    return -1;
+}
+
+int _bc_rm_msg(bcomm_engine_t* eng, bcomm_BC_msg_t* msg) {
+
+    return -1;
+}
+
+int _bc_cp_to_fwd(bcomm_engine_t* eng, bcomm_BC_msg_t* msg_buf) {
+    bcomm_BC_msg_t* to_fwd = malloc(sizeof(bcomm_BC_msg_t));
+    memcpy(to_fwd, msg_buf, sizeof(bcomm_BC_msg_t));
+
+    // Append to end of fwd queue
+    to_fwd->prev = eng->BC_fwd_q_tail->prev;
+    eng->BC_fwd_q_tail->prev->next = to_fwd;
+    to_fwd->next = eng->BC_fwd_q_tail;
+    eng->BC_fwd_q_tail->prev = to_fwd;
+
+    return -1;
+}
+
+int _bc_process_fwd_q_msg(bcomm_engine_t* en, bcomm_BC_msg_t* cur_msg) {
+
+    //_bc_forward();
+
+    return -1;
+}
+
+int make_progress_IAR(bcomm_engine_t* en) {
+
+    bcomm_IAR_msg_t* cur_infra = en->IAR_infra_q_head;
+    bcomm_IAR_msg_t* cur_app = en->IAR_app_q_head;
+
+    while(cur_infra != en->IAR_infra_q_tail) {
+        _iar_process_infra_q_msg(cur_infra);
+        cur_infra = cur_infra->next;
+    }
+
+    while(cur_app != en->IAR_app_q_tail) {
+        _iar_process_infra_q_msg(cur_app);
+        cur_app = cur_app->next;
+    }
+
+    return -1;
+}
+
+int _iar_process_infra_q_msg(bcomm_IAR_msg_t* msg) {
+    return -1;
+}
+
+
+
+
 
 /* ----------------- refactoring for progress engine END ----------------- */
 /* ----------------------------------------------------------------------- */
@@ -295,70 +527,6 @@ int proposalPools_reset(proposal_state* pools) {
 //}
 
 
-typedef enum REQ_STATUS {
-    COMPLETED,
-    IN_PROGRESS,
-    FAILED
-}REQ_STATUS;
-
-typedef struct bcomm_token_t {
-    ID req_id;
-    REQ_STATUS req_stat;
-    bool completed;
-    bool vote_result;
-    struct bcomm_token_t* next;
-} bcomm_token_t;
-
-typedef struct BCastCommunicator {
-    /* MPI fields */
-    MPI_Comm my_comm;                   /* MPI communicator to use */
-    int my_rank;                        /* Local rank value */
-    int world_size;                     /* # of ranks in communicator */
-
-    /* Message fields */
-    size_t msg_size_max;                /* Maximum message size */
-    void *user_send_buf;                /* Buffer for user to send messages in */
-
-    /* Skip ring fields */
-    int my_level;                       /* Level of rank in ring */
-    int last_wall;                      /* The closest rank that has higher level than rank world_size - 1 */
-    int world_is_power_of_2;            /* Whether the world size is a power of 2 */
-
-    /* Send fields */
-    int send_channel_cnt;               /* # of outgoing channels from this rank */
-    int send_list_len;                  /* # of outgoing ranks to send to */
-    int* send_list;                     /* Array of outgoing ranks to send to */
-    void *send_buf;                     /* Buffer for sending messages */
-    int fwd_send_cnt[2];                /* # of outstanding non-blocking forwarding sends for each receive buffer */
-    MPI_Request* fwd_isend_reqs[2];     /* Array for non-blocking forwarding send requests for each receive buffer */
-    MPI_Status* fwd_isend_stats[2];     /* Array for non-blocking forwarding send statuses for each receive buffer */
-    int bcast_send_cnt;                 /* # of outstanding non-blocking broadcast sends */
-    MPI_Request* bcast_isend_reqs;      /* Array for non-blocking broadcast send requests */
-    MPI_Status* bcast_isend_stats;      /* Array for non-blocking broadcast send statuses */
-
-    /* Receive fields */
-    MPI_Request irecv_req;              /* Request for incoming messages */
-    unsigned curr_recv_buf_index;             /* Current buffer for receive */
-    char* recv_buf[2];                  /* Buffers for incoming messages */
-    
-    /* I_all_reduce fields*/
-    bool IAR_active;                    /* Set true if it's doing IAR, and set false after IAR is done.*/
-    char* IAR_recv_buf;                 /* IallReduce recv buf */
-    Vote vote_my_proposal_no_use;          /* Used only by an proposal-active rank. 1 for agree, 0 for decline. Accumulate votes for a proposal that I just submitted. */
-    proposal_state my_own_proposal;      /* Set only when I'm a IAR starter, maintain status for my own proposal */
-    proposal_state proposal_state_pool[PROPOSAL_POOL_SIZE];        /* To support multiple proposals, use a vote pool for each proposal. Use linked list if concurrent proposal number is large. */
-    char* my_proposal;                  /* This is used to compare against received proposal, should be updated timely */
-    char* send_buf_my_vote;
-    int recv_vote_cnt;
-//    int recv_proposal_from;             /* The rank from where I received a proposal, also report votes to this rank. */
-//    int proposal_sent_cnt;              /* How many children received this proposal, it's the number of votes expected. */
-
-    /* Operation counters */
-    int my_bcast_cnt;
-    int bcast_recv_cnt;
-    /* Request progress status*/
-    bcomm_token_t* req_stat;
-} bcomm;
 
 char DEBUG_MODE = 'O';
 typedef struct {
@@ -996,6 +1164,7 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
     return 0;
 }
 
+// status is needed due to the need of tag and source(where it's received).
 int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out) {
     //printf("%s:%u - rank = %03d, tag = %d \n", __func__, __LINE__, my_bcomm->my_rank, status.MPI_TAG);
     void *recv_buf;
@@ -1147,7 +1316,7 @@ int bcast(bcomm* my_bcomm, enum COM_TAGS tag) {
     } /* end if */
     /* Send to all receivers, further away first */
     for (int i = my_bcomm->send_list_len - 1; i >= 0; i--){
-        printf("%s:%u - rank = %03d, bcast to rank %03d, tag = %d\n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->send_list[i], tag);
+        //printf("%s:%u - rank = %03d, bcast to rank %03d, tag = %d\n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->send_list[i], tag);
         MPI_Isend(my_bcomm->send_buf, my_bcomm->msg_size_max, MPI_CHAR, my_bcomm->send_list[i], tag, my_bcomm->my_comm,
                 &my_bcomm->bcast_isend_reqs[i]);// my_bcomm->my_comm
     }
@@ -1697,21 +1866,24 @@ int main(int argc, char** argv) {
     srand((unsigned) time(&t) + getpid());
 
     MPI_Init(NULL, NULL);
-
-    //native_benchmark_single_point_bcast(MPI_COMM_WORLD, init_rank, game_cnt, msg_size);
-
     if(NULL == (my_bcomm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX)))
         return 0;
+    //native_benchmark_single_point_bcast(MPI_COMM_WORLD, init_rank, game_cnt, msg_size);
+
+
 
     //anycast_benchmark(my_bcomm, init_rank, game_cnt, msg_size);
-//    int init_rank = atoi(argv[1]);
+    int init_rank = atoi(argv[1]);
 //    int game_cnt = atoi(argv[2]);
-//    hacky_sack(game_cnt, init_rank, my_bcomm);
+    hacky_sack(10, init_rank, my_bcomm);
 
 
     //test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank);
     int starter_1 = atoi(argv[1]);
     int starter_2 = atoi(argv[2]);
+
+    if(NULL == (my_bcomm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX)))
+        return 0;
     test_IAllReduce_multi_proposal(my_bcomm, starter_1, starter_2);
 
 
