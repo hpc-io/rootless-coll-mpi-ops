@@ -7,11 +7,13 @@
 #include <sys/time.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <assert.h>
 
 //#include "progress_engine.h"
 
 #define MSG_SIZE_MAX 32768
 #define PROPOSAL_POOL_SIZE 16 //maximal concurrent proposal supported
+#define ISEND_CONCURRENT_MAX 128 //maximal number of concurrent and unfinished isend, used to set MPI_Request and MPI_State arrays for MPI_Waitall().
 enum COM_TAGS {//Used as MPI_TAG. Class 1
     BCAST, //class 1
     JOB_DONE,
@@ -103,6 +105,8 @@ typedef struct BCastCommunicator {
     /* Request progress status*/
     bcomm_token_t* req_stat;
 } bcomm;
+
+bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max);
 
 char DEBUG_MODE = 'O';
 typedef struct {
@@ -213,6 +217,13 @@ struct bcomm_BC_msg {
     bcomm_BC_msg_t *next_fwd, *prev_fwd;//still in forwarding
     bcomm_BC_msg_t *next_app_pickup, *prev_app_pickup;//ready for user to look at the buffer
 };
+typedef struct isend_state isend_state;
+typedef struct isend_state{
+    MPI_Request req;
+    MPI_Status stat;
+    isend_state* prev;
+    isend_state* next;
+}isend_state;
 
 typedef struct bcomm_IAR_state bcomm_IAR_state_t;
 struct bcomm_IAR_state_t {
@@ -243,7 +254,10 @@ typedef struct bcomm_progress_engine {
     bcomm_GEN_msg_t // received msg for app to read, then remove.
         *bc_app_pickup_q_head,
         *bc_app_pickup_q_tail;
-
+    isend_state
+        *bc_send_stats_head,
+        *bc_send_stats_tail;
+    unsigned int bc_incomplete;
     //=================   IAR queues   =================
     bcomm_GEN_msg_t
         *prop_rcv_buff_q_head,
@@ -258,6 +272,10 @@ typedef struct bcomm_progress_engine {
     bcomm_GEN_msg_t
         *iar_decision_recv_q_head,
         *iar_decision_recv_q_tail;
+    isend_state
+        *iar_send_stats_head,
+        *iar_send_stats_tail;
+    unsigned int iar_incomplete;
 //    bcomm_GEN_msg_t // msg moved from BC_app_q to here, kind of app_q
 //            *IAR_decision_q_head,
 //            *IAR_decision_q_tail;
@@ -295,6 +313,39 @@ typedef struct bcomm_progress_engine {
 
 //bcomm_BC_msg_t* q_head_infra, bcomm_BC_msg_t* q_tail_infra,bcomm_BC_msg_t* q_head_app, bcomm_BC_msg_t* q_tail_app
 //Main loop of the progress engine: the "engine" of progress engine
+
+int isend_state_append(isend_state* queue_head_in, isend_state* queue_tail_in, isend_state* state_in, unsigned int* cnt_out){
+    assert(state_in);
+    if(!queue_head_in){// no state in the queue yet
+        state_in->prev = NULL;
+        state_in->next = NULL;
+        queue_head_in = state_in;
+        queue_tail_in = state_in;
+    } else {
+    state_in->prev = queue_tail_in;
+    state_in->next = NULL;
+    queue_tail_in = state_in;
+    }
+
+    (*cnt_out)++;
+    return -1;
+}
+
+int isend_state_remove(isend_state* queue_head_in, isend_state* queue_tail_in, isend_state* state_in, unsigned int* cnt_out){
+    assert(state_in);
+
+    if(state_in == queue_head_in){
+        queue_head_in = queue_head_in->next;
+    } else if(state_in == queue_tail_in){
+        queue_tail_in = queue_tail_in->prev;
+    }
+
+    free(state_in);
+
+    (*cnt_out)--;
+    return -1;
+}
+
 int make_progress_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg);
 
 //int msg_classify();
@@ -350,10 +401,8 @@ int _forward(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out);
 //New version, to replace _forward().
 int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg);//new version
 
-//Turn the gear. Output a handle(recv_msgs_out ) to the received msg.
-// It needs a initial msg to receive before calling. Apply to all recv queues in an eng.
 
-//post irecv for all recv queues.
+// Start progress engine, post irecv for all recv queues.
 int progress_engine_init(bcomm_engine_t* eng_out){
     bcomm_engine_t* eng = calloc(1, sizeof(bcomm_engine_t));
     bcomm_GEN_msg_t* bc_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
@@ -381,15 +430,18 @@ int progress_engine_init(bcomm_engine_t* eng_out){
     eng->iar_decision_recv_q_tail = decision_msg;
     _post_irecv_gen(eng, decision_msg, IAR_DECISION);
 
-    return -1;
+    eng_out = eng;
+
+    return 0;
 }
 
+//Turn the gear. Output a handle(recv_msgs_out ) to the received msg.
 int make_progress_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msgs_out) {
-    //
+
     int ret = -1;
     bcomm_GEN_msg_t* cur_rcv_buf = eng->bc_rcv_buff_q_head;
-    bcomm_GEN_msg_t* cur_prop_rcv_buf = eng->prop_rcv_buff_q_head;
-    bcomm_GEN_msg_t* cur_fwd = eng->bc_fwd_q_head;
+    //bcomm_GEN_msg_t* cur_prop_rcv_buf = eng->prop_rcv_buff_q_head;
+    //bcomm_GEN_msg_t* cur_fwd = eng->bc_fwd_q_head;
     bcomm_GEN_msg_t* cur_app_rcv = eng->bc_app_pickup_q_head;
 
     while(!cur_rcv_buf) {//receive and repost with tag = BCAST
@@ -516,29 +568,14 @@ int _gen_bc_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in) {
         _append_to_app_pickup_q(eng, recv_msg_buf_in);
 
         //===== msg dispersion ======
-        switch(recv_msg_buf_in->mpi_stat.MPI_TAG) {
-
-            case IAR_VOTE: {
-                //process vote and update corresponding(find in the queue first) proposal state
-                //ops on vote msg AND the prop_state in proposal_queue
-                break;
-            }
-            case IAR_PROPOSAL: {
-                break;
-            }
-
-            case IAR_DECISION:
-            case BCAST://need to update fowrard and pickup queues
-            default: {
-                //go forward it
-                //_append_to_bc_fwd_q(eng, recv_msg_buf);
-                _bc_forward(eng, recv_msg_buf_in);//if forward here, no need to use fwd queue.
-
-                break;
-            }
+        if(recv_msg_buf_in->mpi_stat.MPI_TAG == BCAST){
+            //_append_to_bc_fwd_q(eng, recv_msg_buf);
+            _bc_forward(eng, recv_msg_buf_in);//if forward here, no need to use fwd queue.
+        }else{//received a wrong type, it may be posted wrong previously
+            return -1;
         }
 
-        // Unlink from recv buf queue
+        // Unlink the used msg from bc recv buf queue
         if(recv_msg_buf_in->prev_rcv != NULL) {
             recv_msg_buf_in->prev_rcv->next_rcv = recv_msg_buf_in->next_rcv;
             recv_msg_buf_in->ref_cnt--;
@@ -597,6 +634,8 @@ int _bc_process_fwd_q_msg(bcomm_engine_t* en, bcomm_GEN_msg_t* cur_msg) {
     return -1;
 }
 
+
+//msg is a recv_buf in bc_recv_buf_q, and already received data
 int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg) {
     //printf("%s:%u - rank = %03d, tag = %d \n", __func__, __LINE__, my_bcomm->my_rank, status.MPI_TAG);
     void *recv_buf;
@@ -611,11 +650,10 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg) {
 //    printf("%s:%u - rank = %03d: recv_buf: origin = %d, pid = %d, vote = %d, data = %s\n",
 //            __func__, __LINE__, my_bcomm->my_rank,
 //            *((int*) recv_buf), *((int*) (recv_buf + sizeof(int))), *((int*) (recv_buf + 2 * sizeof(int))), (char*) (recv_buf + 3 * sizeof(int)));
-    pbuf_deserialize(recv_buf + sizeof(int), pbuf);//still within irecv() scope, need offset origin.
-    //if(status.MPI_TAG == 2)
-//    printf("%s:%u - rank = %03d: recv_buf: origin = %d, pid = %d, vote = %d, data_len = %d, data = %s\n",
-//            __func__, __LINE__, my_bcomm->my_rank,
-//            *((int*) recv_buf), pbuf->pid, pbuf->vote, pbuf->data_len, pbuf->data);
+
+    //still within irecv() scope, need offset origin. The first sizeof(int) bytes presents the origin rank of the msg
+    pbuf_deserialize(recv_buf + sizeof(int), pbuf);
+
     /* Check for a rank that can forward messages */
     if (eng->my_bcomm->my_level > 0) {
         int origin;
@@ -623,20 +661,20 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg) {
 
         /* Retrieve message's origin rank */
         origin = get_origin(recv_buf);
-//        printf("%s:%u - rank = %03d, "
-//                "before forward from rank %03d:(pid = %d, vote = %d, data = %s),"
-//                " tag = %d, origin = %d\n",
-//                __func__, __LINE__, my_bcomm->my_rank,
-//                status.MPI_SOURCE, pbuf->pid, pbuf->vote, pbuf->data, status.MPI_TAG, origin);
+
+
         /* Determine which ranks to send to */
         send_cnt = 0;
         if (status.MPI_SOURCE > eng->my_bcomm->last_wall) {
             /* Send messages, to further ranks first */
             for (int j = eng->my_bcomm->send_channel_cnt; j >= 0; j--) {
+                isend_state* new_fwd_state = calloc(1, sizeof(isend_state));
                 //printf("%s:%u - rank = %03d, source > last_wall, sending to rank %03d now...\n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->send_list[j]);
                 MPI_Isend(recv_buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, eng->my_bcomm->send_list[j],
                         status.MPI_TAG, eng->my_bcomm->my_comm,
-                        &(eng->my_bcomm->fwd_isend_reqs[eng->my_bcomm->curr_recv_buf_index][send_cnt]));
+                        &(new_fwd_state->req));
+                //eng->my_bcomm->fwd_isend_reqs[eng->my_bcomm->curr_recv_buf_index][send_cnt]
+                isend_state_append(eng->bc_send_stats_head, eng->bc_send_stats_tail, new_fwd_state, &(eng->bc_incomplete));
                 send_cnt++;
             }
         } /* end if */
@@ -653,9 +691,11 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg) {
 //                    printf("%s:%u - rank = %03d, upper_bound >= 0\n", __func__, __LINE__, my_bcomm->my_rank);
                     if (check_passed_origin(eng->my_bcomm, origin, eng->my_bcomm->send_list[j]) == 0) {
 //                        printf("%s:%u - rank = %03d, not passed, sending to rank %03d now...\n", __func__, __LINE__, my_bcomm->my_rank, my_bcomm->send_list[j]);
+                        isend_state* new_fwd_state = calloc(1, sizeof(isend_state));
                         MPI_Isend(recv_buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, eng->my_bcomm->send_list[j],
                                 status.MPI_TAG, eng->my_bcomm->my_comm,
-                                &(eng->my_bcomm->fwd_isend_reqs[eng->my_bcomm->curr_recv_buf_index][send_cnt]));
+                                &(new_fwd_state->req));
+                        isend_state_append(eng->bc_send_stats_head, eng->bc_send_stats_tail, new_fwd_state, &(eng->bc_incomplete));
                         send_cnt++;
                     }
                 }
@@ -663,7 +703,7 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg) {
         } /* end else */
 
         /* Update # of outstanding messages being sent for bcomm */
-        eng->my_bcomm->fwd_send_cnt[eng->my_bcomm->curr_recv_buf_index] = send_cnt;//???
+        //eng->my_bcomm->fwd_send_cnt[eng->my_bcomm->curr_recv_buf_index] = send_cnt;//???
 
         if(status.MPI_TAG == IAR_PROPOSAL) {
             PBuf* pbuf2 = malloc(sizeof(PBuf));
@@ -726,12 +766,15 @@ int _proposal_approve_toy(const void *prop_1, const void *prop_2, void *app_ctx)
 }
 
 
-int test_gen_bcast( bcomm_engine_t* eng, int buf_size, int root_rank, int cnt){
+int test_gen_bcast(int buf_size, int root_rank, int cnt){
     if(buf_size > MSG_SIZE_MAX) {
         printf("Message size too big. Maximum allowed is %d\n", MSG_SIZE_MAX);
         return -1;
     }
-    bcomm* my_bcomm = eng->my_bcomm;
+    bcomm_engine_t* eng;
+    progress_engine_init(eng);
+    bcomm* my_bcomm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX);
+
 
     int recved_tag = 0;
     int recved_cnt = 0;
@@ -1202,6 +1245,42 @@ int check_passed_origin(const bcomm* my_bcomm, int origin_rank, int to_rank) {
         else
             return 1;
     }
+}
+
+//To replace buffer_maintain_irecv()
+//wait all incomplete isends. No need to repost irecv here.
+int isend_maintain(bcomm_engine_t* eng){
+    int cnt = eng->bc_incomplete;
+    if(cnt > 0){
+        assert(cnt <= ISEND_CONCURRENT_MAX);
+        MPI_Request req_null = -1;
+        MPI_Status stat_null;
+        stat_null.MPI_ERROR = -1;
+        stat_null.MPI_SOURCE = -1;
+        stat_null.MPI_TAG = -1;
+        stat_null.count_hi_and_cancelled = -1;
+        stat_null.count_lo = -1;
+        MPI_Request reqs[ISEND_CONCURRENT_MAX] = {req_null};
+        MPI_Status stats[ISEND_CONCURRENT_MAX] = {stat_null};
+        isend_state* cur = eng->bc_send_stats_head;
+        int i = 0;
+        for(; i < cnt; i++){
+            if(!cur)
+                break;
+            reqs[i] = cur->req;
+            stats[i] = cur->stat;
+            if(!cur->next)
+                break;
+            cur = cur->next;
+        }
+
+        MPI_Waitall(i, reqs, stats);
+
+        eng->bc_incomplete = 0;
+        return 0;
+    }
+
+    return -1;
 }
 
 // Used by all ranks
