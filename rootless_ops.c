@@ -29,7 +29,7 @@ enum COM_TAGS {//Used as MPI_TAG. Class 1
 enum MSG_TAGS {//Used as a msg tag, it's a field of the msg. Class 2
     IAR_Vote // to replace IAR_VOTE in mpi_tag
 };
-
+typedef struct bcomm_generic_msg bcomm_GEN_msg_t;
 typedef int ID;
 typedef int Vote;// used for & operation. 1 for yes, 0 for no.
 typedef struct Proposal_state{
@@ -39,6 +39,7 @@ typedef struct Proposal_state{
     Vote vote; //accumulated vote, default = 1;
     int votes_needed; //num of votes needed to report to parent, equals to the number of sends of a proposal
     int votes_recved;
+    bcomm_GEN_msg_t* proposal_msg;//the last place holds a proposal, should be freed when decision is made and executed.
 } proposal_state; //clear when vote result is reported.
 
 typedef enum REQ_STATUS {
@@ -64,7 +65,7 @@ typedef struct BCastCommunicator {
     /* Message fields */
     size_t msg_size_max;                /* Maximum message size */
     void *user_send_buf;                /* Buffer for user to send messages in */
-
+    void *sys_send_buf;                 /* For internal message sends, simmilar as user_send_buf */
     /* Skip ring fields */
     int my_level;                       /* Level of rank in ring */
     int last_wall;                      /* The closest rank that has higher level than rank world_size - 1 */
@@ -75,6 +76,7 @@ typedef struct BCastCommunicator {
     int send_list_len;                  /* # of outgoing ranks to send to */
     int* send_list;                     /* Array of outgoing ranks to send to */
     void *send_buf;                     /* Buffer for sending messages */
+    void *send_buf_internal;                     /* Buffer for sending messages */
     int fwd_send_cnt[2];                /* # of outstanding non-blocking forwarding sends for each receive buffer */
     MPI_Request* fwd_isend_reqs[2];     /* Array for non-blocking forwarding send requests for each receive buffer */
     MPI_Status* fwd_isend_stats[2];     /* Array for non-blocking forwarding send statuses for each receive buffer */
@@ -119,7 +121,7 @@ Log MY_LOG;
 // | SN pid | char* proposal_content |
 typedef struct Proposal_buf{
     ID pid;
-    Vote vote;//vote or decision
+    Vote vote;//0 = vote NO, 1 = vote yes, -1 = proposal, -2 = decision.
     unsigned int data_len;
     char* data;
 }PBuf;
@@ -145,6 +147,17 @@ void get_time_str(char *str_out) {
     timeinfo = localtime(&rawtime);
     sprintf(str_out, "%d:%d:%d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 }
+
+//Proposal pool ops
+int proposalPool_init(proposal_state* pp_in_out, bcomm_GEN_msg_t* prop_msg_in);
+int proposalPool_proposal_add(proposal_state* pools, proposal_state* pp_in);
+int proposalPool_proposal_setNeededVoteCnt(proposal_state* pools, ID k, int cnt);
+int proposalPool_vote_merge(proposal_state* pools, ID k, Vote v, int* p_index_out);
+int proposalPool_get(proposal_state* pools, ID k, proposal_state* result);
+int proposalPool_get_index(proposal_state* pools, ID k);
+int proposalPool_rm(proposal_state* pools, ID k);
+int proposalPools_reset(proposal_state* pools);
+
 /* ----------------------------------------------------------------------- */
 /* ----------------- refactoring for progress engine BEGIN --------------- */
 
@@ -175,12 +188,13 @@ enum State_IAR {
 
 };
 
-typedef struct bcomm_generic_msg bcomm_GEN_msg_t;
+
 struct bcomm_generic_msg{
 
     char buf[MSG_SIZE_MAX];// Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
     int id_debug;
-    int msg_type;//1 for BC, 2 for IAR
+
+    enum COM_TAGS msg_type;//Only support BCAST, IAR_PROPOSAL for now, set this when the msg is in app pickup queue.
     MPI_Request mpi_req; //filled when repost irecv
     MPI_Status mpi_stat;
     //bcomm_BC_msg_t* bc_msg;
@@ -255,16 +269,21 @@ typedef struct bcomm_progress_engine {
     bcomm_GEN_msg_t // received msg for app to read, then remove.
         *bc_app_pickup_q_head,
         *bc_app_pickup_q_tail;
-    MPI_Request *bc_isend_reqs;
-    MPI_Status *bc_isend_stats;
+//    MPI_Request *bc_isend_reqs;
+//    MPI_Status *bc_isend_stats;
+
     isend_state
         *bc_send_stats_head,
         *bc_send_stats_tail;
     unsigned int bc_incomplete;
+    unsigned int recved_bcast_cnt;
+    unsigned int sent_bcast_cnt;
+
+
     //=================   IAR queues   =================
     bcomm_GEN_msg_t
-        *prop_rcv_buff_q_head,
-        *prop_rcv_buff_q_tail;
+        *iar_prop_rcv_q_head,
+        *Iar_prop_rcv_q_tail;
     bcomm_IAR_state_t
         *prop_state_q_head,
         *prop_state_q_tail;
@@ -279,6 +298,10 @@ typedef struct bcomm_progress_engine {
         *iar_send_stats_head,
         *iar_send_stats_tail;
     unsigned int iar_incomplete;
+    Vote vote_my_proposal_no_use;          /* Used only by an proposal-active rank. 1 for agree, 0 for decline. Accumulate votes for a proposal that I just submitted. */
+    proposal_state my_own_proposal;      /* Set only when I'm a IAR starter, maintain status for my own proposal */
+    proposal_state proposal_state_pool[PROPOSAL_POOL_SIZE];        /* To support multiple proposals, use a vote pool for each proposal. Use linked list if concurrent proposal number is large. */
+    char* my_proposal;
 //    bcomm_GEN_msg_t // msg moved from BC_app_q to here, kind of app_q
 //            *IAR_decision_q_head,
 //            *IAR_decision_q_tail;
@@ -316,7 +339,7 @@ typedef struct bcomm_progress_engine {
 
 //bcomm_BC_msg_t* q_head_infra, bcomm_BC_msg_t* q_tail_infra,bcomm_BC_msg_t* q_head_app, bcomm_BC_msg_t* q_tail_app
 //Main loop of the progress engine: the "engine" of progress engine
-int bcast_gen(bcomm_engine_t* eng, enum COM_TAGS tag);
+int bcast_gen(bcomm_engine_t* eng, enum COM_TAGS tag, int sys_use);
 int isend_bc_maintain(bcomm_engine_t* eng);
 int isend_state_append(isend_state* queue_head_in, isend_state* queue_tail_in, isend_state* state_in, unsigned int* cnt_out){
     assert(state_in);
@@ -335,20 +358,20 @@ int isend_state_append(isend_state* queue_head_in, isend_state* queue_tail_in, i
     return -1;
 }
 
-int isend_state_remove(isend_state* queue_head_in, isend_state* queue_tail_in, isend_state* state_in, unsigned int* cnt_out){
-    assert(state_in);
-
-    if(state_in == queue_head_in){
-        queue_head_in = queue_head_in->next;
-    } else if(state_in == queue_tail_in){
-        queue_tail_in = queue_tail_in->prev;
-    }
-
-    free(state_in);
-
-    (*cnt_out)--;
-    return -1;
-}
+//int isend_state_remove(isend_state* queue_head_in, isend_state* queue_tail_in, isend_state* state_in, unsigned int* cnt_out){
+//    assert(state_in);
+//
+//    if(state_in == queue_head_in){
+//        queue_head_in = queue_head_in->next;
+//    } else if(state_in == queue_tail_in){
+//        queue_tail_in = queue_tail_in->prev;
+//    }
+//
+//    free(state_in);
+//
+//    (*cnt_out)--;
+//    return -1;
+//}
 
 int make_progress_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out);
 
@@ -374,20 +397,18 @@ int _bc_rm_msg(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg);
 //Check BC irecv, loop 2 IAR msg queues
 int make_progress_IAR(bcomm_engine_t* en);
 
-//recv votes and update corresponding states in proposal_q
-int _iar_msg_vote_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
 
-//scan bc_app_q and move proposal msgs to eng->proposal_q,
-int _iar_fetch_proposal(bcomm_engine_t* eng);
+// actions for proposals, votes and decisions. Called in make_progress_gen() loop.
+int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
+int _iar_vote_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
+int _iar_decision_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
 
-//scan bc_app_q, and move proposal msgs to eng->decision_q,
-int _iar_fetch_decision(bcomm_engine_t* eng);
 
-//Actual actions for proposal and decision
-int _iar_process_proposal_q(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
-int _iar_process_decision_q(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
+int _vote_back(bcomm_engine_t* eng, proposal_state* ps, Vote vote);
+int _iar_decision_bcast(bcomm_engine_t* eng, ID my_proposal_id, Vote decision);
 
-int _decision_response();
+// Submit a proposal, add it to waiting list, then return.
+int _iar_submit_proposal(bcomm_engine_t* eng, char* proposal, unsigned long prop_size, ID my_proposal_id);
 
 
 //Type for user callback functions
@@ -411,15 +432,27 @@ bcomm_engine_t* progress_engine_new(bcomm* my_bcomm){
 
     bcomm_engine_t* eng = calloc(1, sizeof(bcomm_engine_t));
     bcomm_GEN_msg_t* bc_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
-    bcomm_GEN_msg_t* iar_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
-    bcomm_GEN_msg_t* vote_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
-    bcomm_GEN_msg_t* decision_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
+//    bcomm_GEN_msg_t* iar_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
+//    bcomm_GEN_msg_t* vote_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
+//    bcomm_GEN_msg_t* decision_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
 
     eng->my_bcomm = my_bcomm;
     // Init BC queues
 
     eng->bc_rcv_buff_q_head = bc_msg;
     eng->bc_rcv_buff_q_tail = bc_msg;
+    eng->recved_bcast_cnt = 0;
+    eng->bc_incomplete = 0;
+    eng->sent_bcast_cnt = 0;
+
+    proposal_state new_prop_state;
+    new_prop_state.pid = -1;
+    new_prop_state.proposal_msg = NULL;
+    new_prop_state.recv_proposal_from = -1;
+    new_prop_state.vote = 0;
+    new_prop_state.votes_needed = -1;
+    new_prop_state.votes_recved = -1;
+
     _post_irecv_gen(eng, bc_msg, BCAST);
 
 //    // Init IAR queue
@@ -444,38 +477,52 @@ bcomm_engine_t* progress_engine_new(bcomm* my_bcomm){
 int make_progress_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t** recv_msgs_out) {
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     int ret = -1;
-    bcomm_GEN_msg_t* cur_rcv_buf = eng->bc_rcv_buff_q_head;
-    //bcomm_GEN_msg_t* cur_prop_rcv_buf = eng->prop_rcv_buff_q_head;
-    //bcomm_GEN_msg_t* cur_fwd = eng->bc_fwd_q_head;
-    //bcomm_GEN_msg_t* cur_app_rcv = eng->bc_app_pickup_q_head;
-    printf("%s:%u - rank = %03d, msg = %p, id = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, cur_rcv_buf, cur_rcv_buf->id_debug);
-    while(cur_rcv_buf) {//receive and repost with tag = BCAST
+
+    //========================== Bcast msg handling ==========================
+    bcomm_GEN_msg_t* cur_bc_rcv_buf = eng->bc_rcv_buff_q_head;
+    printf("%s:%u - rank = %03d, msg = %p, id = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, cur_bc_rcv_buf, cur_bc_rcv_buf->id_debug);
+    while(cur_bc_rcv_buf) {//receive and repost with tag = BCAST
         printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-        if(_gen_bc_msg_handler(eng, cur_rcv_buf) == 1){//BC received something
-            printf("%s:%u - rank = %03d, cur_rcv_buf = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, cur_rcv_buf);
-            *recv_msgs_out = cur_rcv_buf;
+        if(_gen_bc_msg_handler(eng, cur_bc_rcv_buf) == 1){//BC received something
+            printf("%s:%u - rank = %03d, cur_rcv_buf = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, cur_bc_rcv_buf);
+            *recv_msgs_out = cur_bc_rcv_buf;
             printf("%s:%u - rank = %03d, recv_msgs_out = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msgs_out);
             ret = 1;
         }
-        printf("%s:%u - rank = %03d, cur_rcv_buf = %p, cur_rcv_buf->next = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, cur_rcv_buf, cur_rcv_buf->next_rcv);
-        cur_rcv_buf = cur_rcv_buf->next_rcv;//move cursor
+        printf("%s:%u - rank = %03d, cur_rcv_buf = %p, cur_rcv_buf->next = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, cur_bc_rcv_buf, cur_bc_rcv_buf->next_rcv);
+        cur_bc_rcv_buf = cur_bc_rcv_buf->next_rcv;//move cursor
         printf("%s:%u - rank = %03d, recv_msgs_out = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msgs_out);
     }
     printf("%s:%u - rank = %03d, recv_msgs_out = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msgs_out);
-//    while(cur_prop_rcv_buf != NULL) {//receive and repost with tag = IAR_PROPOSAL
-//        bcomm_GEN_msg_t* next_prop_rcv_cur = cur_prop_rcv_buf->next_rcv;
-//        //unlink cur_rcv_buf from recv_buf queue and add to fwd and pickup queues.
-//        _prop_msg_handler(eng, cur_prop_rcv_buf);
-//        cur_prop_rcv_buf = next_prop_rcv_cur;
-//    }
 
 
-    //work on forward queue: maybe done in _gen_bc_msg_handler() to speed up
-//    while(cur_fwd != eng->bc_fwd_q_tail) {
-//        bcomm_GEN_msg_t* next_fwd_cur = cur_fwd->next_fwd;
-//        _bc_process_fwd_q_msg(eng, cur_fwd);//unlink from fwd queue
-//        cur_fwd = next_fwd_cur;
-//    }
+    //=========================== IAR proposal handling ======================
+    bcomm_GEN_msg_t* cur_prop_rcv_buf = eng->iar_prop_rcv_q_head;
+    while(cur_prop_rcv_buf != NULL) {//receive and repost with tag = IAR_PROPOSAL
+
+        _iar_proposal_handler(eng, cur_prop_rcv_buf);
+
+        cur_prop_rcv_buf = cur_prop_rcv_buf->next_rcv;
+    }
+
+    //============================ IAR votes handling =======================
+    // Update states for a proposal based on received votes
+    bcomm_GEN_msg_t* cur_vote_rcv_buf = eng->iar_vote_recv_q_head;
+    while(cur_vote_rcv_buf != NULL) {//receive and repost with tag = IAR_VOTE
+
+        _iar_vote_handler(eng, cur_vote_rcv_buf);
+
+        cur_vote_rcv_buf = cur_vote_rcv_buf->next_rcv;
+    }
+
+    //========================== IAR decision handling ======================
+    bcomm_GEN_msg_t* cur_decision_rcv_buf = eng->iar_decision_recv_q_head;
+    while(cur_decision_rcv_buf != NULL) {//receive and repost with tag = IAR_VOTE
+        //Update states for a proposal based on received votes
+        _iar_decision_handler(eng, cur_decision_rcv_buf);
+
+        cur_decision_rcv_buf = cur_decision_rcv_buf->next_rcv;
+    }
 
     //work on app_pickup queue
 //    while(!cur_app_rcv){
@@ -494,109 +541,122 @@ int _test_completed(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
     printf("Rank %d: %s:%u - msg->mpi_req = %d, msg = %p, id = %d\n",  eng->my_bcomm->my_rank, __func__, __LINE__, msg_buf->mpi_req, msg_buf, msg_buf->id_debug);
     int completed = 0;
     MPI_Test(&(msg_buf->mpi_req), &completed, &(msg_buf->mpi_stat));
-    printf("Rank %d: %s: %d\n",  eng->my_bcomm->my_rank, __func__, __LINE__);
+    printf("Rank %d: %s: %d, req = %d\n",  eng->my_bcomm->my_rank, __func__, __LINE__, msg_buf->mpi_req);
+    //MPI_Test(&(msg_buf->mpi_req), &completed, &(msg_buf->mpi_stat));
+    printf("Rank %d: %s: %d, req = %d\n",  eng->my_bcomm->my_rank, __func__, __LINE__, msg_buf->mpi_req);
     if(completed)
-        printf("Rank %d: %s: %d:  completed!\n",  eng->my_bcomm->my_rank, __func__, __LINE__);
+        printf("Rank %d: %s: %d: request %d completed!\n",  eng->my_bcomm->my_rank, __func__, __LINE__, msg_buf->mpi_req);
     return completed;
 }
 
 
 int _post_irecv_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf_in_out, enum COM_TAGS rcv_tag) {
     printf("Rank %d: %s:%u - msg->mpi_req = %d, msg = %p, posting irecv, tag = %d\n",  eng->my_bcomm->my_rank, __func__, __LINE__, msg_buf_in_out->mpi_req, msg_buf_in_out, rcv_tag);
-
+    msg_buf_in_out->msg_type =  rcv_tag;
     int ret = MPI_Irecv(msg_buf_in_out->buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, rcv_tag, eng->my_bcomm->my_comm, &(msg_buf_in_out->mpi_req));
     msg_buf_in_out->id_debug = 1;
-    printf("Rank %d: %s:%u - msg->mpi_req = %d, irecv() = %d\n",  eng->my_bcomm->my_rank, __func__, __LINE__, msg_buf_in_out->mpi_req, ret);
+    printf("Rank %d: %s:%u - msg = %p, mpi_req = %d, \n",  eng->my_bcomm->my_rank, __func__, __LINE__, msg_buf_in_out, msg_buf_in_out->mpi_req);
     return -1;
 }
 
-int _prop_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf) {
-    if(!eng || !recv_msg_buf)
-        return -1;
-
-//    if(_test_completed(eng, recv_msg_buf)) {
-//        //decide if I agree this proposal,
-//        void* proposal;
-//        int *approved = (eng->approve_cb_func)(proposal, eng->approve_app_ctx);
-//
-//        if(*approved) {
-//            //if yes, update state, move to fwd queue,
-//            _append_to_bc_fwd_q(eng, recv_msg_buf);
-//        } else {
-//            //otherwise vote back no.
-//        }
-//    } else
-//        return 0;
-//
-//
-//    _post_irecv_gen(eng, recv_msg_buf, IAR_PROPOSAL);
-
+int _vote_no(eng, recv_msg_buf_in){
     return -1;
 }
 
-int _prop_vote_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
-    if(!eng || !msg_buf)
-        return -1;
-
-    if(_test_completed(eng, msg_buf)) {
-        //update proposal_state_queue
-        //decide if all necessary votes are received, then vote back
-    } else
-        return 0;
-
+int _vote_yes(eng, recv_msg_buf_in){
     return -1;
 }
 
-int _prop_decision_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
-    if(!eng || !msg_buf)
-        return -1;
-
-    if(_test_completed(eng, msg_buf)) {
-        //update proposal_state_queue
-
-        _append_to_bc_fwd_q(eng, msg_buf);
-    } else
-        return 0;
-
-    return -1;
-}
-
-
-// recv_msg_buf_in_out is the iterator for the queue
-int _gen_bc_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in) {
-    printf("%s:%u - rank = %03d, id = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg_buf_in->id_debug);
+int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in) {
     if(!eng || !recv_msg_buf_in)
         return -1;
-    printf("%s:%u - rank = %03d, id = %d, req = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg_buf_in->id_debug, recv_msg_buf_in->mpi_req);
-    if(_test_completed(eng, recv_msg_buf_in)) {
-        printf("%s:%u - rank = %03d, received buf = %s\n", __func__, __LINE__, eng->my_bcomm->my_rank,recv_msg_buf_in->buf );
-        // Allocate new msg buf.
-        //Note: need to assign all 4 pointers so it stay in 2 queues.
-        bcomm_GEN_msg_t* next_msg_new = calloc(1, sizeof(bcomm_GEN_msg_t));
 
-        //Append newly allocated msg buffer to recv queue
-        next_msg_new->prev_rcv = eng->bc_rcv_buff_q_tail;
-        eng->bc_rcv_buff_q_tail->next_rcv = next_msg_new;
-        next_msg_new->next_rcv = NULL;
-        eng->bc_rcv_buff_q_tail = next_msg_new;
-        next_msg_new->ref_cnt = 1;
-        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-        // Repost irecv, use buff in the newly allocated msg
-        _post_irecv_gen(eng, next_msg_new, BCAST);
-        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-        //Add to the end of pickup queue:
-        _append_to_app_pickup_q(eng, recv_msg_buf_in);
-        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-        //===== msg dispersion ======
-        if(recv_msg_buf_in->mpi_stat.MPI_TAG == BCAST){
+    if(_test_completed(eng, recv_msg_buf_in)) {
+        bcomm_GEN_msg_t* next_msg_new = calloc(1, sizeof(bcomm_GEN_msg_t));
+        eng->recved_bcast_cnt++;
+
+        //Append newly allocated msg buffer to proposal recv queue
+        if(eng->iar_prop_rcv_q_head == eng->Iar_prop_rcv_q_tail){
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-            //_append_to_bc_fwd_q(eng, recv_msg_buf);
-            _bc_forward(eng, recv_msg_buf_in);//if forward here, no need to use fwd queue.
-        }else{//received a wrong type, it may be posted wrong previously
-            return -1;
+            eng->iar_prop_rcv_q_head->next_rcv = next_msg_new;
+            next_msg_new->prev_rcv = eng->iar_prop_rcv_q_head;
+            eng->Iar_prop_rcv_q_tail = next_msg_new;
+            next_msg_new->next_rcv = NULL;
+        } else {
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+            next_msg_new->prev_rcv = eng->Iar_prop_rcv_q_tail;
+            eng->Iar_prop_rcv_q_tail->next_rcv = next_msg_new;
+            next_msg_new->next_rcv = NULL;
+            eng->Iar_prop_rcv_q_tail = next_msg_new;
         }
-        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-        // Unlink the used msg from bc recv buf queue
+
+        _post_irecv_gen(eng, next_msg_new, IAR_PROPOSAL);
+
+        PBuf* pbuf = malloc(sizeof(PBuf));
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        pbuf_deserialize(recv_msg_buf_in->buf + sizeof(int), pbuf);
+
+        //add a state to waiting_votes queue.
+        proposal_state* new_prop_state = malloc(sizeof(proposal_state));
+        //need to read pid from msg and fill in state.
+        proposalPool_init(new_prop_state, recv_msg_buf_in);
+        new_prop_state->pid = pbuf->pid;
+        new_prop_state->recv_proposal_from = recv_msg_buf_in->mpi_stat.MPI_SOURCE;
+        new_prop_state->votes_needed = eng->my_bcomm->send_list_len;
+        new_prop_state->votes_recved = 0;
+        int compatible = 0;
+        int i_approved = 0;
+        if(eng->my_own_proposal.pid >= 0){// I have a active proposal waiting for processing.
+
+            if(compatible){//both win
+                proposalPool_proposal_add(eng->proposal_state_pool, new_prop_state);
+                if(eng->my_bcomm->my_level > 0){//leaf rank, no forward, but need to vote right away
+                    _bc_forward(eng, recv_msg_buf_in);
+                } else {
+                    _vote_back(eng, new_prop_state, 1);
+                }
+
+                i_approved = 1;
+            } else { //compete
+                int mine_win = 0;
+
+                if(mine_win){
+                    i_approved = 0;
+                    _vote_back(eng, new_prop_state, 0);
+                } else {//others' win, bcast to "CANCEL" my proposal
+                    proposalPool_proposal_add(eng->proposal_state_pool, new_prop_state);
+                    if(eng->my_bcomm->my_level > 0){//leaf rank, no forward, but need to vote right away
+                        _bc_forward(eng, recv_msg_buf_in);
+                    } else {
+                        _vote_back(eng, new_prop_state, 1);
+                    }
+
+                    _iar_decision_bcast(eng, eng->my_own_proposal.pid, 0);
+                }
+            }
+        } else { //Local: do I approve the proposal
+
+            if(i_approved) {
+                //if yes, update state, move to fwd queue,
+                proposalPool_proposal_add(eng->proposal_state_pool, new_prop_state);
+                if(eng->my_bcomm->my_level > 0){//leaf rank, no forward, but need to vote right away
+                    _bc_forward(eng, recv_msg_buf_in);
+                } else {
+                    _vote_back(eng, new_prop_state, 1);
+                }
+
+            } else {//otherwise vote back no, discard proposal and free the msg.
+                _vote_back(eng, new_prop_state, 0);
+            }
+        }
+
+
+
+        free(pbuf);
+
+        // Remove the used msg from proposal recv buf queue,
+        //      - wait for votes from bcast dst ranks.
+        //      - add a state to wait_queue
         if(recv_msg_buf_in->prev_rcv != NULL) {
             recv_msg_buf_in->prev_rcv->next_rcv = recv_msg_buf_in->next_rcv;
             recv_msg_buf_in->ref_cnt--;
@@ -610,13 +670,215 @@ int _gen_bc_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in) {
                 recv_msg_buf_in->prev_rcv = NULL;
             }
         } else { // msg_buf is the head, so prev is NULL
+            printf("%s:%u - rank = %03d, head = %p, recv_msg->next = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->iar_prop_rcv_q_head, recv_msg_buf_in->next_rcv);
+            eng->iar_prop_rcv_q_head = recv_msg_buf_in->next_rcv;
+            printf("%s:%u - rank = %03d, head = %p, recv_msg->next = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->iar_prop_rcv_q_head, recv_msg_buf_in->next_rcv);
+            recv_msg_buf_in->next_rcv = NULL;
+        }
+
+    } else
+        return 0;
+
+    return -1;
+}
+
+int _vote_back(bcomm_engine_t* eng, proposal_state* ps, Vote vote){
+    unsigned int send_len = 0;
+    pbuf_serialize(ps->pid, vote, 0, NULL, eng->my_bcomm->sys_send_buf, &send_len);
+    MPI_Send(eng->my_bcomm->sys_send_buf, send_len, MPI_CHAR, ps->recv_proposal_from, IAR_VOTE, eng->my_bcomm->my_comm);
+    return send_len;
+}
+
+int _iar_vote_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
+    if(!eng || !msg_buf)
+        return -1;
+
+    if(_test_completed(eng, msg_buf)) {
+        //update proposal_state_queue
+        //decide if all necessary votes are received, then vote back
+        PBuf* vote_buf = malloc(sizeof(PBuf));
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        pbuf_deserialize(msg_buf->buf, vote_buf);//vote: no need of + sizeof(int).
+
+        if(vote_buf->pid == eng->my_own_proposal.pid){ //votes for my proposal
+
+            printf("%s:%u - rank = %03d, received a vote from rank %03d for my proposal, vote = %d.\n",
+                    __func__, __LINE__, eng->my_bcomm->my_rank, msg_buf->mpi_stat.MPI_SOURCE, vote_buf->vote);
+            eng->my_own_proposal.votes_recved++;
+            eng->my_own_proposal.vote &= vote_buf->vote;//*(Vote*)(vote_buf->data);
+
+            if(vote_buf->vote == 0){//find rejection! bcast "cancel" decision right now
+
+                _iar_decision_bcast(eng, eng->my_own_proposal.pid, 0);
+
+            } else {//local agreed
+                if(eng->my_bcomm->my_own_proposal.votes_recved == eng->my_own_proposal.votes_needed) {//all done, bcast decision.
+                    //bcast decision
+                    _iar_decision_bcast(eng, eng->my_own_proposal.pid, 1);
+                    pbuf_free(vote_buf);
+                    return 5;
+                } else {// need more votes for my decision, continue to irecv.
+                    pbuf_free(vote_buf);
+                    return 0;
+                }
+            }
+        } else { //Votes for proposals in the state queue
+            int p_index = -1;
+            int ret = proposalPool_vote_merge(eng->proposal_state_pool, vote_buf->pid, vote_buf->vote, &p_index);
+            proposal_state* ps = &(eng->my_bcomm->proposal_state_pool[p_index]);
+            if(ret < 0 ){
+                printf("Function %s:%u - rank %03d: can't merge vote, proposal not exists, pid = %d \n", __func__, __LINE__, eng->my_bcomm->my_rank, vote_buf->pid);
+                pbuf_free(vote_buf);
+                return -1;
+            } else { // Find proposal, merge completed.
+                if(ret == 1){//done collecting votes, vote back
+
+                    _vote_back(eng, ps, ps->vote);
+
+                    pbuf_free(vote_buf);
+                }
+                //continue to irecv votes
+            }
+        }
+    } else //irecv not completed
+        return 0;
+
+    return 0;
+}
+
+
+int _iar_decision_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf_in) {
+    if(!eng || !msg_buf_in)
+        return -1;
+
+    if(_test_completed(eng, msg_buf_in)) {
+        //update proposal_state_queue
+        PBuf* decision_buf = malloc(sizeof(PBuf));
+        pbuf_deserialize(msg_buf_in->buf, decision_buf);
+        int index = proposalPool_get_index(eng->proposal_state_pool, decision_buf->pid);
+
+        if(decision_buf->vote == 0){//proposal canceled
+            //some cleanup
+            free(eng->proposal_state_pool[index].proposal_msg);
+        } else {
+            //execute proposal: move it to pickup_queue??
+            _append_to_app_pickup_q(eng, eng->proposal_state_pool[index].proposal_msg);
+        }
+
+        proposalPool_rm(eng->proposal_state_pool, decision_buf->pid);
+        _bc_forward(eng, msg_buf_in);
+
+    } else
+        return 0;
+
+    return -1;
+}
+
+int _iar_submit_proposal(bcomm_engine_t* eng, char* proposal, unsigned long prop_size, ID my_proposal_id){
+
+    eng->my_own_proposal.pid = my_proposal_id;
+    eng->my_own_proposal.proposal_msg = NULL;
+    eng->my_own_proposal.vote = 1;
+    eng->my_own_proposal.votes_needed = eng->my_bcomm->send_list_len;
+    eng->my_own_proposal.votes_recved = 0;
+
+    unsigned buf_len;
+    if(0 != pbuf_serialize(my_proposal_id, 1, prop_size, proposal, eng->my_bcomm->user_send_buf, &buf_len)) {
+        printf("pbuf_serialize failed.\n");
+        return -1;
+    }
+
+    bcast_gen(eng, IAR_PROPOSAL, 0);
+
+    return -1;
+}
+
+int _cleanup_sys_buf(bcomm_engine_t* eng){
+    memset(eng->my_bcomm->sys_send_buf, 0, eng->my_bcomm->msg_size_max);
+    return 0;
+}
+int _iar_decision_bcast(bcomm_engine_t* eng, ID my_proposal_id, Vote decision){
+
+    unsigned send_len = 0;
+    pbuf_serialize(my_proposal_id, decision, 0, NULL, eng->my_bcomm->sys_send_buf, &send_len);
+    bcast_gen(eng, IAR_DECISION, 1);
+    //cleanup sys_send_buf
+    _cleanup_sys_buf(eng);
+    return -1;
+}
+
+// recv_msg_buf_in_out is the iterator for the queue
+int _gen_bc_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in) {
+    printf("%s:%u - rank = %03d, id = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg_buf_in->id_debug);
+    if(!eng || !recv_msg_buf_in)
+        return -1;
+    printf("%s:%u - rank = %03d, id = %d, req = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg_buf_in->id_debug, recv_msg_buf_in->mpi_req);
+    if(_test_completed(eng, recv_msg_buf_in)) {
+        printf("%s:%u - rank = %03d, received buf = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank,recv_msg_buf_in->buf+sizeof(int));
+        // Allocate new msg buf.
+        //Note: need to assign all 4 pointers so it stay in 2 queues.
+        bcomm_GEN_msg_t* next_msg_new = calloc(1, sizeof(bcomm_GEN_msg_t));
+        eng->recved_bcast_cnt++;
+        //Append newly allocated msg buffer to recv queue
+        if(eng->bc_rcv_buff_q_head == eng->bc_rcv_buff_q_tail){
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+            eng->bc_rcv_buff_q_head->next_rcv = next_msg_new;
+            next_msg_new->prev_rcv = eng->bc_rcv_buff_q_head;
+            eng->bc_rcv_buff_q_tail = next_msg_new;
+            next_msg_new->next_rcv = NULL;
+        } else{
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+            next_msg_new->prev_rcv = eng->bc_rcv_buff_q_tail;
+            eng->bc_rcv_buff_q_tail->next_rcv = next_msg_new;
+            next_msg_new->next_rcv = NULL;
+            eng->bc_rcv_buff_q_tail = next_msg_new;
+        }
+
+        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+        // Repost irecv, use buff in the newly allocated msg
+
+        _post_irecv_gen(eng, next_msg_new, BCAST);
+        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+
+        //Add to the end of pickup queue:
+        _append_to_app_pickup_q(eng, recv_msg_buf_in);
+        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+        //===== msg dispersion ======
+        if(recv_msg_buf_in->mpi_stat.MPI_TAG == BCAST){
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+            //_append_to_bc_fwd_q(eng, recv_msg_buf);
+            _bc_forward(eng, recv_msg_buf_in);//if forward here, no need to use fwd queue.
+
+        }else{//received a wrong type, it may be posted wrong previously
+            return -1;
+        }
+
+        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+
+        // Remove the used msg from bc recv buf queue,
+        if(recv_msg_buf_in->prev_rcv != NULL) {
+            recv_msg_buf_in->prev_rcv->next_rcv = recv_msg_buf_in->next_rcv;
+            recv_msg_buf_in->ref_cnt--;
+            if(recv_msg_buf_in->next_rcv != NULL){
+                recv_msg_buf_in->next_rcv->prev_rcv = recv_msg_buf_in->prev_rcv;
+                recv_msg_buf_in->prev_rcv->next_rcv = recv_msg_buf_in->next_rcv;
+                recv_msg_buf_in->next_rcv = NULL;
+            }
+            else{//recv_msg_buf is the tail
+                recv_msg_buf_in->prev_rcv->next_rcv = NULL;
+                recv_msg_buf_in->prev_rcv = NULL;
+            }
+        } else { // msg_buf is the head, so prev is NULL
+            printf("%s:%u - rank = %03d, head = %p, recv_msg->next = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->bc_rcv_buff_q_head, recv_msg_buf_in->next_rcv);
             eng->bc_rcv_buff_q_head = recv_msg_buf_in->next_rcv;
+            printf("%s:%u - rank = %03d, head = %p, recv_msg->next = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->bc_rcv_buff_q_head, recv_msg_buf_in->next_rcv);
             recv_msg_buf_in->next_rcv = NULL;
         }
         printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         // Reuse the data, appended to app pickup queue, don't need to release now.
         return 1;//received something, needs pickup
     }
+
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     return -1;
 }
@@ -806,12 +1068,12 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
     bcomm_engine_t* eng = progress_engine_new(my_bcomm);
     //bcomm* my_bcomm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX);
 
-    int recved_tag = 0;
+
     int recved_cnt = 0;
     unsigned long start = get_time_usec();
     unsigned long time_send = 0;
     unsigned long time_recv = 5;
-    bcomm_GEN_msg_t* recv_msg = NULL;// = calloc(1, sizeof(bcomm_GEN_msg_t));
+    bcomm_GEN_msg_t* recv_msg = NULL;
     int i = 0;
     if(my_bcomm->my_rank == root_rank) {//send
         //load data for bcast
@@ -819,7 +1081,7 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
         my_bcomm->user_send_buf = buf;
         for(int i = 0; i < cnt; i++) {
             printf("Rank %d bcasting: msg = [%s]\n", my_bcomm->my_rank, my_bcomm->user_send_buf);
-            bcast_gen(eng, BCAST);
+            bcast_gen(eng, BCAST, 0);
         }
     } else {//recv
         //Assume eng is initialized, no need to post now
@@ -833,6 +1095,7 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
                 //printf("%s:%u - rank = %03d, Received msg, buf = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg->buf);
                 recved_cnt++;
                 printf("%s:%u - rank = %03d, received bcast msg:[%s], received %d already, expecting %d in total.\n", __func__, __LINE__, my_bcomm->my_rank, recv_msg->buf, recved_cnt, cnt);
+                //free(recv_msg);
             }
             //sleep(1);
             i++;
@@ -849,6 +1112,7 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
         float time_avg = time_recv/cnt;
         printf("Root(rank_%d): Anycast ran %d times, average costs %f usec/run\n", my_bcomm->my_rank, cnt, time_avg);
     }
+
     return 0;
 
 }
@@ -866,7 +1130,7 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
 
 int proposal_compete(char* p1, char* p2);
 
-int proposalPool_init(proposal_state* pp_in_out) {
+int proposalPool_init(proposal_state* pp_in_out, bcomm_GEN_msg_t* prop_msg_in) {
     if(!pp_in_out)
         return -1;
 
@@ -876,6 +1140,7 @@ int proposalPool_init(proposal_state* pp_in_out) {
     pp_in_out->vote = 1;
     pp_in_out->votes_needed = -1;
     pp_in_out->votes_recved = -1;
+    pp_in_out->proposal_msg = prop_msg_in;
     return 0;
 }
 
@@ -895,11 +1160,8 @@ int proposalPool_proposal_add(proposal_state* pools, proposal_state* pp_in) {//a
     }
 
     // id not found, add new one.
-
     for(i = 0; i <= PROPOSAL_POOL_SIZE - 1; i++) {
-
         if(pools[i].pid == -1) {//first available
-
             pools[i]= *pp_in;
 //            printf("Function %s:%u - pp added, confirm in array, pid = %d , index = %d\n", __func__, __LINE__, pools[i].pid, i);
             return i;
@@ -908,7 +1170,6 @@ int proposalPool_proposal_add(proposal_state* pools, proposal_state* pp_in) {//a
 
     if(i == PROPOSAL_POOL_SIZE - 1) //no empty pool for use.
         return -1;
-
 
     return -2;
 }
@@ -928,7 +1189,7 @@ int proposalPool_proposal_setNeededVoteCnt(proposal_state* pools, ID k, int cnt)
     return -1;
 }
 
-int proposalPool_vote_merge(proposal_state* pools, ID k, Vote v) {
+int proposalPool_vote_merge(proposal_state* pools, ID k, Vote v, int* p_index_out) {
     if(!pools)
         return -1;
 
@@ -937,7 +1198,11 @@ int proposalPool_vote_merge(proposal_state* pools, ID k, Vote v) {
         if(pools[i].pid == k) {
             pools[i].votes_recved++;
             pools[i].vote &= v;
-            return 0;
+            *p_index_out = i;
+            if(pools[i].votes_recved == pools[i].votes_needed){//votes done
+                return 1;
+            } else
+                return 0;
         }
     }
     // id not found, need to add new one, not just merge
@@ -974,6 +1239,9 @@ int proposalPool_rm(proposal_state* pools, ID k) {
         if(pools[i].pid == k) {
             pools[i].pid = -1;
             pools[i].vote = 1;
+            if(!(pools[i].proposal_msg)){
+                pools[i].proposal_msg = NULL;
+            }
             return 0;
         }
     }
@@ -987,6 +1255,7 @@ int proposalPools_reset(proposal_state* pools) {
         pools[i].recv_proposal_from = -1;
         pools[i].votes_needed = -1;
         pools[i].votes_recved = -1;
+        pools[i].proposal_msg = NULL;
     }
     return 0;
 }
@@ -1069,7 +1338,7 @@ int pbuf_deserialize(char* buf_in, PBuf* pbuf_out) {
 typedef struct Vote_buf{
     ID pid;
     Vote vote;
-}VBuf;
+}VBuf;//votes don't need bcast, only 1-to-1 send.
 
 ID make_pid(bcomm* my_bcomm) {
     return (ID) my_bcomm->my_rank;
@@ -1077,43 +1346,43 @@ ID make_pid(bcomm* my_bcomm) {
 
 int proposal_agree(char* p1, char* p2);
 
-void log_init(MPI_Comm my_comm, Log my_log) {
-    char fname[128];
-    MPI_Comm_rank(my_comm, &(my_log.my_rank));
-    char time_str[64];
-    get_time_str(time_str);
-    sprintf(fname, "Log_rank_%03d_%s.log", my_log.my_rank, time_str);
-    my_log.log_file = fopen(fname, "w+");
-}
-
-void log_close(Log my_log) {
-    if (DEBUG_MODE == 'F') {
-        fflush(my_log.log_file);
-        fclose(my_log.log_file);
-    }
-    return;
-}
-
-void debug(Log my_log) {
-    if (DEBUG_MODE == 'O') {
-        return;
-    }
-
-    char log_line[MSG_SIZE_MAX];
-    sprintf(log_line, "%s:%u - rank = %03d\n", __func__, __LINE__, my_log.my_rank);
-    switch (DEBUG_MODE) {
-    case 'P':
-        printf("%s\n", log_line);
-        break;
-    case 'F':
-        printf("fputs...\n");
-        fputs(log_line, my_log.log_file);
-        break;
-    default:
-        break;
-    }
-    return;
-}
+//void log_init(MPI_Comm my_comm, Log my_log) {
+//    char fname[128];
+//    MPI_Comm_rank(my_comm, &(my_log.my_rank));
+//    char time_str[64];
+//    get_time_str(time_str);
+//    sprintf(fname, "Log_rank_%03d_%s.log", my_log.my_rank, time_str);
+//    my_log.log_file = fopen(fname, "w+");
+//}
+//
+//void log_close(Log my_log) {
+//    if (DEBUG_MODE == 'F') {
+//        fflush(my_log.log_file);
+//        fclose(my_log.log_file);
+//    }
+//    return;
+//}
+//
+//void debug(Log my_log) {
+//    if (DEBUG_MODE == 'O') {
+//        return;
+//    }
+//
+//    char log_line[MSG_SIZE_MAX];
+//    sprintf(log_line, "%s:%u - rank = %03d\n", __func__, __LINE__, my_log.my_rank);
+//    switch (DEBUG_MODE) {
+//    case 'P':
+//        printf("%s\n", log_line);
+//        break;
+//    case 'F':
+//        printf("fputs...\n");
+//        fputs(log_line, my_log.log_file);
+//        break;
+//    default:
+//        break;
+//    }
+//    return;
+//}
 
 int is_powerof2(int n) {
     while (n != 1 && n % 2 == 0) {
@@ -1228,8 +1497,11 @@ bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max) {
     my_bcomm->bcast_isend_reqs = malloc(my_bcomm->send_list_len * sizeof(MPI_Request));
     my_bcomm->bcast_isend_stats = malloc(my_bcomm->send_list_len * sizeof(MPI_Status));
     my_bcomm->send_buf = malloc(sizeof(int) + msg_size_max);
+    my_bcomm->send_buf_internal = malloc(sizeof(int) + msg_size_max);
     memcpy(my_bcomm->send_buf, &my_bcomm->my_rank, sizeof(int));
+    memcpy(my_bcomm->send_buf_internal, &my_bcomm->my_rank, sizeof(int));
     my_bcomm->user_send_buf = ((char *)my_bcomm->send_buf) + sizeof(int);
+    my_bcomm->sys_send_buf = ((char *)my_bcomm->send_buf_internal) + sizeof(int);
 
     /* Set up receive fields */
     my_bcomm->recv_buf[0] = (char*) malloc(sizeof(int) + msg_size_max);
@@ -1285,7 +1557,7 @@ int check_passed_origin(const bcomm* my_bcomm, int origin_rank, int to_rank) {
 }
 
 //To replace buffer_maintain_irecv()
-//wait all incomplete isends. No need to repost irecv here.
+//wait all incomplete isends. Free all isend states. No need to repost irecv here.
 int isend_bc_maintain(bcomm_engine_t* eng){
     int cnt = eng->bc_incomplete;
     if(cnt > 0){
@@ -1389,6 +1661,7 @@ int _IAllReduce_StarterVote(bcomm* my_bcomm, Vote vote_in, ID pid) {
 }
 //Decision format: ID:Vote:Content.
 //TODO: need to refactor to reuse PBuf.
+//OLD.
 int _IAllReduce_bacast_decision(bcomm* my_bcomm, ID pid, char* proposal, int pp_len, Vote decision) {
     //memcpy(my_bcomm->user_send_buf + sizeof(ID) + sizeof(unsigned int), &my_bcomm->my_own_proposal.vote, sizeof(Vote));
     if(!proposal) {
@@ -1450,7 +1723,8 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
         proposal_state pp;
         //check if exist, if yes, increase it by merging. if no, it's an error, since a proposal_pool should exist before a corresponding vote arrive.
         // receive a vote means I must received a proposal before.
-        if(0 != proposalPool_vote_merge(my_bcomm->proposal_state_pool, vote_buf->pid, vote_buf->vote)) {
+        int t;
+        if(0 != proposalPool_vote_merge(my_bcomm->proposal_state_pool, vote_buf->pid, vote_buf->vote, &t)) {
             printf("Function %s:%u - rank %03d: can't merge vote, proposal not exists, pid = %d \n", __func__, __LINE__, my_bcomm->my_rank, vote_buf->pid);
             bufer_maintain_irecv(my_bcomm);
             pbuf_free(vote_buf);
@@ -1524,7 +1798,7 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
                 Vote tmp_v = 1;
                 //my_bcomm->vote_my_proposal_no_use = tmp_v;
                 proposal_state pp;
-                proposalPool_init(&pp);
+                proposalPool_init(&pp, NULL);
                 pp.pid = pbuf->pid;
                 pp.recv_proposal_from = status.MPI_SOURCE;
                 pp.votes_recved = 0;
@@ -1575,7 +1849,7 @@ int _IAllReduce_process(bcomm* my_bcomm, MPI_Status status, char** recv_buf_out)
 
             } else { // starter, all ranks.
                 proposal_state pp;
-                proposalPool_init(&pp);
+                proposalPool_init(&pp, NULL);
                 pp.pid = pbuf->pid;
                 pp.recv_proposal_from = status.MPI_SOURCE;
                 pp.votes_recved = 0;
@@ -1806,7 +2080,7 @@ int load_bcast(bcomm* my_bcomm) {
     return 0;
 }
 
-int bcast_gen(bcomm_engine_t* eng, enum COM_TAGS tag) {
+int bcast_gen(bcomm_engine_t* eng, enum COM_TAGS tag, int sys_use) {
     /* If there are outstanding messages being broadcast, wait for them now */
     bcomm* my_bcomm = eng->my_bcomm;
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
@@ -1814,12 +2088,19 @@ int bcast_gen(bcomm_engine_t* eng, enum COM_TAGS tag) {
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     /* Send to all receivers, further away first */
     int complete = 0;
+    void* buf_to_send;
     for (int i = my_bcomm->send_list_len - 1; i >= 0; i--) {
         printf("%s:%u - rank = %03d, i = %d\n", __func__, __LINE__, my_bcomm->my_rank, i);
         isend_state* new_state = calloc(1, sizeof(isend_state));
+        //my_bcomm->user_send_buf
+        if(!sys_use){
+            buf_to_send = my_bcomm->send_buf;
+        } else {
+            buf_to_send = my_bcomm->send_buf_internal;
+        }
 
-        MPI_Isend(my_bcomm->user_send_buf, my_bcomm->msg_size_max, MPI_CHAR, my_bcomm->send_list[i], tag, my_bcomm->my_comm,
-                &(new_state->req));
+        MPI_Isend(buf_to_send, my_bcomm->msg_size_max, MPI_CHAR, my_bcomm->send_list[i], tag, my_bcomm->my_comm,
+            &(new_state->req));
         isend_state_append(eng->bc_send_stats_head, eng->bc_send_stats_tail, new_state, &(eng->bc_incomplete));
         complete = 0;
 
@@ -1828,6 +2109,8 @@ int bcast_gen(bcomm_engine_t* eng, enum COM_TAGS tag) {
             printf("%s:%u - rank = %03d: isend() completed. new_state->req = %d\n", __func__, __LINE__, my_bcomm->my_rank, new_state->req);
         }
     }
+    eng->sent_bcast_cnt++;
+
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
 
     /* Update # of outstanding messages being sent for bcomm */
@@ -1854,6 +2137,54 @@ int bcast(bcomm* my_bcomm, enum COM_TAGS tag) {
     /* Update # of outstanding messages being sent for bcomm */
     my_bcomm->bcast_send_cnt = my_bcomm->send_list_len;
     my_bcomm->my_bcast_cnt++;
+    return 0;
+}
+
+int engine_cleanup(bcomm_engine_t* eng){
+    int total_bcast = 0;
+    MPI_Request req;
+    MPI_Status stat_out1, stat_out2;
+    int done = 0;
+    bcomm* my_bcomm = eng->my_bcomm;
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    isend_bc_maintain(eng);//waitall
+    bcomm_GEN_msg_t* recv_msg;
+    MPI_Iallreduce(&(eng->sent_bcast_cnt), &total_bcast, 1, MPI_INT, MPI_SUM, eng->my_bcomm->my_comm, &req);
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    do {
+        printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+        MPI_Test(&req, &done, &stat_out1);// test for MPI_Iallreduce.
+        if (!done) {
+            printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+            make_progress_gen(eng, &recv_msg);
+        }
+    } while (!done);
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+    while (eng->recved_bcast_cnt + eng->sent_bcast_cnt < total_bcast) {
+        printf("%s:%u - rank = %03d: eng->recved_bcast_cnt = %d, eng->sent_bcast_cnt = %d, total_bcast = %d\n", __func__, __LINE__, my_bcomm->my_rank,
+                eng->recved_bcast_cnt, eng->sent_bcast_cnt, total_bcast);
+        make_progress_gen(eng, &recv_msg);
+    }
+    recv_msg = NULL;
+    printf("%s:%u - rank = %03d: eng->recved_bcast_cnt = %d, eng->sent_bcast_cnt = %d, total_bcast = %d\n", __func__, __LINE__, my_bcomm->my_rank,
+            eng->recved_bcast_cnt, eng->sent_bcast_cnt, total_bcast);
+    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+//    isend_bc_maintain(eng);
+//    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+//    //MPI_Cancel all alive request in all msg queues
+//    recv_msg = eng->bc_rcv_buff_q_head;
+//    while(recv_msg){
+//        printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+//        printf("%s:%u - Rank %d: recv_msg->req = %d, recv_msg->buf = %d, recv_msg->next_rcv = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg->mpi_req, recv_msg->buf, recv_msg->next_rcv);
+//        if(_test_completed(eng, &recv_msg->mpi_req)){
+//            printf("%s:%u  Rank %d: recv_msg->req = %d, recv_msg->next_rcv = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg->mpi_req, recv_msg->next_rcv);
+//            MPI_Cancel(&recv_msg->mpi_req);
+//        }
+//        recv_msg = recv_msg->next_rcv;
+//    }
+
+    free(eng->my_bcomm);
+    free(eng);
     return 0;
 }
 
@@ -2322,6 +2653,84 @@ int random_rank(int my_rank, int world_size) {
 
     return next_rank;
 }
+int hacky_sack_progress_engine(int cnt, bcomm* my_bcomm){
+
+    bcomm_engine_t* eng = progress_engine_new(my_bcomm);
+    char *next_rank;
+    unsigned long time_start;
+    unsigned long time_end;
+    unsigned long phase_1;
+    int bcast_cnt;
+    int recv_msg_cnt = 0;
+    int my_rank;
+
+    /* Get pointer to sending buffer */
+    next_rank = my_bcomm->user_send_buf;
+
+    time_start = get_time_usec();
+
+    /* Compose message to send (in bcomm's send buffer) */
+    *(int *)next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
+
+    /* Broadcast message */
+    bcast_gen(eng, BCAST, 0);
+    bcast_cnt = 1;
+    int ret = -1;
+    bcomm_GEN_msg_t* recv_msg = NULL;
+    while (bcast_cnt < cnt) {
+        char *recv_buf;
+
+        /* Retrieve a message (in internal bcomm buffer) */
+        int recved_tag = 0;
+        MPI_Status stat;
+        make_progress_gen(eng, &recv_msg);
+        //ret = irecv_wrapper(my_bcomm, &recv_buf, &stat);
+        //recved_tag = stat.MPI_TAG;
+        if(recv_msg){
+            recv_msg_cnt++;
+            int recv_rank = *(int *)(recv_msg->buf);
+            if (recv_rank == my_bcomm->my_rank){
+                isend_bc_maintain(eng);
+            }
+            *(int *)next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
+            bcast_gen(eng, BCAST, 0);
+            bcast_cnt++;
+        }
+
+//        if ( ret == 0 && recved_tag == BCAST) {
+//            int recv_rank = *(int *)recv_buf;
+//
+//            if (recv_rank == my_bcomm->my_rank) {
+//                /* If there are outstanding messages being broadcast, wait for them now, before re-using buffer */
+//                if(my_bcomm->bcast_send_cnt > 0) {
+//                    MPI_Waitall(my_bcomm->bcast_send_cnt, my_bcomm->bcast_isend_reqs, my_bcomm->bcast_isend_stats);
+//                    my_bcomm->bcast_send_cnt = 0;
+//                } /* end if */
+//
+//                /* Compose message to send (in bcomm's send buffer) */
+//                *(int *)next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
+//
+//                /* Broadcast message */
+//                bcast(my_bcomm, BCAST);
+//                bcast_cnt++;
+//            }
+//        }
+    }
+
+    my_rank = my_bcomm->my_rank;
+    //int teardown_cnt = bcomm_teardown(my_bcomm, BCAST);
+
+    time_end = get_time_usec();
+    phase_1 = time_end - time_start;
+    engine_cleanup(eng);
+    MPI_Barrier(MPI_COMM_WORLD);
+    sleep(1);
+    printf("Rank %d reports:  Hacky sack done, round # = %d . received %d times.  Phase 1 cost %lu msecs\n", my_rank,
+            bcast_cnt, recv_msg_cnt, phase_1 / 1000);
+
+    return 0;
+
+}
 
 int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     char *next_rank;
@@ -2404,16 +2813,18 @@ int main(int argc, char** argv) {
 
 
     //anycast_benchmark(my_bcomm, init_rank, game_cnt, msg_size);
-    int init_rank = atoi(argv[1]);
-    int op_cnt = atoi(argv[2]);
-    //hacky_sack(10, init_rank, my_bcomm);
+    //int init_rank = atoi(argv[1]);
+    int op_cnt = atoi(argv[1]);
+    //hacky_sack_progress_engine(op_cnt, my_bcomm);
 
-    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
+//    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     //test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank);
 //    int starter_1 = atoi(argv[1]);
 //    int starter_2 = atoi(argv[2]);
 
     //test_IAllReduce_multi_proposal(my_bcomm, starter_1, starter_2);
+
+    int init_rank = atoi(argv[2]);
     test_gen_bcast(my_bcomm, MSG_SIZE_MAX, init_rank, op_cnt);
 
     //printf("Parsing result: sample_str = %s,\n path = %s, level = %d, format = %s.\n", sample_str, file_path_out, level, format);
