@@ -190,7 +190,6 @@ enum State_IAR {
 
 
 struct bcomm_generic_msg{
-
     char buf[MSG_SIZE_MAX];// Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
     int id_debug;
 
@@ -221,7 +220,6 @@ struct bcomm_msg_comm{
         *prev_fwd, *next_fwd;
     bcomm_GEN_msg_t
         *prev_pickup, *next_pickup;
-
 };
 
 typedef struct bcomm_BC_msg bcomm_BC_msg_t;
@@ -245,7 +243,6 @@ struct bcomm_IAR_state_t {
     //bcomm_msg_comm_t commons;
     proposal_state prop_state;
     //enum State_IAR iar_state;
-
     bcomm_IAR_state_t *next, *prev;
 };
 
@@ -373,6 +370,7 @@ int isend_state_append(isend_state* queue_head_in, isend_state* queue_tail_in, i
 //    return -1;
 //}
 
+// Entry point: turing gears for progress engine.
 int make_progress_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out);
 
 //int msg_classify();
@@ -393,10 +391,6 @@ int _append_to_app_pickup_q(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg);
 
 // Finally release a msg along with it's buffer, use when 1. after app pick up a msg, and 2. after a msg is forwarded
 int _bc_rm_msg(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg);
-
-//Check BC irecv, loop 2 IAR msg queues
-int make_progress_IAR(bcomm_engine_t* en);
-
 
 // actions for proposals, votes and decisions. Called in make_progress_gen() loop.
 int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
