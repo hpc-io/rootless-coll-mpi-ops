@@ -556,7 +556,7 @@ int _post_irecv_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf_in_out, enum C
     int ret = MPI_Irecv(msg_buf_in_out->buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, rcv_tag, eng->my_bcomm->my_comm, &(msg_buf_in_out->mpi_req));
     msg_buf_in_out->id_debug = 1;
     printf("Rank %d: %s:%u - msg = %p, mpi_req = %d, \n",  eng->my_bcomm->my_rank, __func__, __LINE__, msg_buf_in_out, msg_buf_in_out->mpi_req);
-    return -1;
+    return ret;
 }
 
 int _vote_no(eng, recv_msg_buf_in){
@@ -607,7 +607,6 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
         int compatible = 0;
         int i_approved = 0;
         if(eng->my_own_proposal.pid >= 0){// I have a active proposal waiting for processing.
-
             if(compatible){//both win
                 proposalPool_proposal_add(eng->proposal_state_pool, new_prop_state);
                 if(eng->my_bcomm->my_level > 0){//leaf rank, no forward, but need to vote right away
@@ -635,7 +634,6 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
                 }
             }
         } else { //Local: do I approve the proposal
-
             if(i_approved) {
                 //if yes, update state, move to fwd queue,
                 proposalPool_proposal_add(eng->proposal_state_pool, new_prop_state);
@@ -649,8 +647,6 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
                 _vote_back(eng, new_prop_state, 0);
             }
         }
-
-
 
         free(pbuf);
 
