@@ -637,7 +637,7 @@ int make_progress_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t** recv_msg_out) {
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         bcomm_GEN_msg_t* msg_t = cur_bc_rcv_buf->next;
         if(_gen_bc_msg_handler(eng, cur_bc_rcv_buf) == 1){//BC received something
-            printf("%s:%u - rank = %03d, cur_rcv_buf = %p, buf = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, cur_bc_rcv_buf, cur_bc_rcv_buf->buf + sizeof(int));
+            //printf("%s:%u - rank = %03d, cur_rcv_buf = %p, buf = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, cur_bc_rcv_buf, cur_bc_rcv_buf->buf + sizeof(int));
             *recv_msg_out = cur_bc_rcv_buf;
             //printf("%s:%u - rank = %03d, recv_msgs_out = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msgs_out);
             ret = 1;
@@ -1288,7 +1288,7 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
         }
 
         while(eng->bc_wait_q_head){//loop until wait queue is empty
-            sleep(1);
+            //sleep(1);
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
             make_progress_gen(eng, &recv_msg);
             //recv_msg = NULL;
@@ -1297,7 +1297,7 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
         printf("%s:%u - rank = %03d: bcast completed, no outstanding isend requests.\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     } else {//recv
         //Assume eng is initialized, no need to post now
-        sleep(1);
+        //sleep(1);
         do{
             //receive, repost irecv.
             //printf("%s:%u - rank = %03d, recv_msgs_out = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg);
@@ -2816,11 +2816,11 @@ int native_benchmark_single_point_bcast(MPI_Comm my_comm, int root_rank, int cnt
     return 0;
 }
 
-int prev_rank(int my_rank, int world_size) {
+int get_prev_rank(int my_rank, int world_size) {
     return (my_rank + (world_size - 1)) % world_size;
 }
 
-int next_rank(int my_rank, int world_size) {
+int get_next_rank(int my_rank, int world_size) {
     return (my_rank + 1) % world_size;
 }
 
@@ -2850,14 +2850,14 @@ int hacky_sack_progress_engine(int cnt, bcomm* my_bcomm){
     time_start = get_time_usec();
 
     /* Compose message to send (in bcomm's send buffer) */
-    int next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
+    int next_rank = random_rank(my_bcomm->my_rank, my_bcomm->world_size);
+            //get_next_rank(my_bcomm->my_rank, my_bcomm->world_size);
+            //prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
 
     /* Broadcast message */
-
-    bcast_cnt = 1;
-
     bcomm_GEN_msg_t* prev_rank_bc_msg = msg_new_bc(eng, &next_rank, sizeof(int));
     bcast_gen(eng, prev_rank_bc_msg, BCAST);
+    bcast_cnt = 0;
 
     bcomm_GEN_msg_t* recv_msg = NULL;
 
@@ -2911,7 +2911,7 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
     time_start = get_time_usec();
 
     /* Compose message to send (in bcomm's send buffer) */
-    *(int *)next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
+    *(int *)next_rank = get_prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
 
     /* Broadcast message */
     bcast(my_bcomm, BCAST);
@@ -2936,7 +2936,7 @@ int hacky_sack(int cnt, int starter, bcomm* my_bcomm) {
                 } /* end if */
 
                 /* Compose message to send (in bcomm's send buffer) */
-                *(int *)next_rank = prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
+                *(int *)next_rank = get_prev_rank(my_bcomm->my_rank, my_bcomm->world_size);
 
                 /* Broadcast message */
                 bcast(my_bcomm, BCAST);
@@ -3026,7 +3026,7 @@ int main(int argc, char** argv) {
     //anycast_benchmark(my_bcomm, init_rank, game_cnt, msg_size);
     //int init_rank = atoi(argv[1]);
     int op_cnt = atoi(argv[1]);
-    //hacky_sack_progress_engine(op_cnt, my_bcomm);
+    hacky_sack_progress_engine(op_cnt, my_bcomm);
 
 //    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
     //test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank);
@@ -3035,8 +3035,8 @@ int main(int argc, char** argv) {
 
     //test_IAllReduce_multi_proposal(my_bcomm, starter_1, starter_2);
 
-    int init_rank = atoi(argv[2]);
-    test_gen_bcast(my_bcomm, MSG_SIZE_MAX, init_rank, op_cnt);
+    //int init_rank = atoi(argv[2]);
+    //test_gen_bcast(my_bcomm, MSG_SIZE_MAX, init_rank, op_cnt);
 
     //printf("Parsing result: sample_str = %s,\n path = %s, level = %d, format = %s.\n", sample_str, file_path_out, level, format);
     MPI_Finalize();
