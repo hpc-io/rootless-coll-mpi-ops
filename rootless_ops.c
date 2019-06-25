@@ -2552,7 +2552,7 @@ int queue_test(int cnt){
     q.head = NULL;
     q.tail = NULL;
     q.msg_cnt = 0;
-    bcomm_GEN_msg_t* new_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
+
     for(int i = 0; i < cnt; i++){
         bcomm_GEN_msg_t* new_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
         new_msg->id_debug = i;
@@ -2564,7 +2564,7 @@ int queue_test(int cnt){
     bcomm_GEN_msg_t* cur = q.head;
     printf("cur = %p\n", cur);
     while(cur){
-        printf("Looping queue: msg->id_debug = %d\n", cur->id_debug);
+        printf("Looping queue after appending: msg->id_debug = %d\n", cur->id_debug);
         cur = cur->next;
     }
 
@@ -2574,13 +2574,15 @@ int queue_test(int cnt){
         printf("Remove element: msg->id_debug = %d\n", cur->id_debug);
         bcomm_GEN_msg_t* t = cur->next;
         queue_remove(&q, cur);
+        free(cur);
         cur = t;
     }
 
     cur = q.head;
-    printf("cur = %p, q.cnt = %d\n", cur, q.msg_cnt);
+    printf("After removing, q.head = %p, q.cnt = %d\n", cur, q.msg_cnt);
+
     while(cur){
-        printf("Looping queue: msg->id_debug = %d\n", cur->id_debug);
+        printf("Looping queue after removing: msg->id_debug = %d\n", cur->id_debug);
         cur = cur->next;
     }
 
@@ -2591,39 +2593,31 @@ int queue_test(int cnt){
 
 int main(int argc, char** argv) {
     bcomm* my_bcomm;
-
-
     time_t t;
-    int tmp;
 
-
-    //int msg_size = atoi(argv[3]);
-    //int no_rank = atoi(argv[4]);
     srand((unsigned) time(&t) + getpid());
 
     MPI_Init(NULL, NULL);
     if(NULL == (my_bcomm = bcomm_init(MPI_COMM_WORLD, MSG_SIZE_MAX)))
         return 0;
-    //native_benchmark_single_point_bcast(MPI_COMM_WORLD, init_rank, game_cnt, msg_size);
+
     printf("%s:%u - rank = %03d, pid = %d\n", __func__, __LINE__, my_bcomm->my_rank, getpid());
-
-
-    //queue_test(500);
-
 
     //anycast_benchmark(my_bcomm, init_rank, game_cnt, msg_size);
 
-    int op_cnt = atoi(argv[1]);
-    hacky_sack_progress_engine(op_cnt, my_bcomm);
-    //int init_rank = atoi(argv[2]);
+
+    //int init_rank = atoi(argv[1]);
+    //int op_cnt = atoi(argv[2]);
     //test_gen_bcast(my_bcomm, MSG_SIZE_MAX, init_rank, op_cnt);
 
 
+    int op_cnt = atoi(argv[1]);
+    hacky_sack_progress_engine(op_cnt, my_bcomm);
 
-    //int no_rank = atoi(argv[2]);
+
+    //int init_rank = atoi(argv[1]);
+    //int no_rank = atoi(argv[2]); //Rank that says 'NO'
     //test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank);
-
-
 
 
     //    int starter_1 = atoi(argv[1]);
@@ -2631,8 +2625,6 @@ int main(int argc, char** argv) {
     //test_IAllReduce_multi_proposal(my_bcomm, starter_1, starter_2);
 
 
-
-    //printf("Parsing result: sample_str = %s,\n path = %s, level = %d, format = %s.\n", sample_str, file_path_out, level, format);
     MPI_Finalize();
 
     return 0;
