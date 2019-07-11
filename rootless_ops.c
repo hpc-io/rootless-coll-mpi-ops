@@ -269,7 +269,7 @@ typedef struct bcomm_progress_engine {
     proposal_state proposal_state_pool[PROPOSAL_POOL_SIZE];        /* To support multiple proposals, use a vote pool for each proposal. Use linked list if concurrent proposal number is large. */
     char* my_proposal;
 
-    iar_cb_func_t approve_cb_func; //provided by the user, used to judge if agree with a proposal
+    iar_cb_func_t prop_judgement_cb; //provided by the user, used to judge if agree with a proposal
     void *app_ctx;
     iar_cb_func_t proposal_action; //if a proposal is approved, what to do with it.
 
@@ -326,7 +326,7 @@ typedef struct proposals_ctx{
 //Toy callback functions for proposal judging and approval.
 int is_proposal_approved_cb(const void *buf, void *app_data);
 int proposal_action_cb(const void *buf, void *app_data);
-
+int proposal_compete(const void *p1, const void* p2, void* app_data);
 
 int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg);//new version
 
@@ -447,7 +447,7 @@ bcomm_engine_t* progress_engine_new(bcomm* my_bcomm, void* approv_cb_func, void*
 
     eng->my_bcomm = my_bcomm;
 
-    eng->approve_cb_func = approv_cb_func;
+    eng->prop_judgement_cb = approv_cb_func;
     eng->proposal_action = app_proposal_action;
     eng->app_ctx = app_ctx;
 
@@ -549,7 +549,7 @@ int make_progress_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t** recv_msg_out) {
                 }
 
                 case IAR_DECISION: {
-                    printf("%s:%u - rank = %03d: received a decision\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+
                     eng->recved_bcast_cnt++;
 
                     printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
@@ -621,27 +621,35 @@ typedef struct DS_TMP{
     iar_cb_func_t my_func;
 }ds_tmp;
 
-int is_proposal_approved_cb(const void *buf, void *app_data){
-    char* my_prop = (char*)app_data;
-    char* recved_prop = (char*)buf;
+//decide which proposal to win.
+// Return 1, if mine is declined, others' win;
+// return 0 if mine wins, others' declined
+// return 2 if both wins: compatible
+int is_proposal_approved_cb(const void *recved_prop, void *my_prop){
 
-    printf("buf = [%s], ctx = [%s]\n", buf, app_data);
-    if(!my_prop || strlen(my_prop) == 0)//I don't have a rpoposal, so I approve anything coming in.
+    printf("received proposal = [%s], my proposal = [%s]\n", recved_prop, my_prop);
+    if(!my_prop || strlen(my_prop) == 0)//I don't have a proposal, so I approve anything coming in.
         return 1;
 
-    if(strcmp(my_prop, recved_prop) == 0){
+    if(strcmp(my_prop, recved_prop) == 0){//compatible
         printf("%s:%u return 1\n", __func__, __LINE__);
-        return 1;
+        return 2;
     }
-    else {
+
+    if(((char*)recved_prop)[0] < ((char*)my_prop)[0]) {
         printf("%s:%u return 0\n", __func__, __LINE__);
         return 0;
-    }
-    //return 7;
+    }else
+        return 1;
+
 }
 
 int proposal_action_cb(const void *buf, void *app_data){
     printf("Proposal action started.\n");
+    return 0;
+}
+
+int my_proposal_won(const void *mine, const void* received, void* app_data) {
     return 0;
 }
 
@@ -676,7 +684,7 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
     new_prop_state->recv_proposal_from = recv_msg_buf_in->irecv_stat.MPI_SOURCE;
     new_prop_state->state = IN_PROGRESS;
     recv_msg_buf_in->prop_state = new_prop_state;
-    printf("%s:%u - rank = %03d: received a proposal\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+    printf("%s:%u - rank = %03d: received a proposal: %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg_buf_in);
     if(pbuf->pid == eng->my_own_proposal.pid){
         printf("%s:%u - rank = %03d: received a proposal with my own pid: something went wrong...\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         return -1;
@@ -689,30 +697,50 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
 
     printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
 
-    if((eng->approve_cb_func)(pbuf->data, eng->my_proposal)){
-        //_bc_forward(eng, recv_msg_buf_in);
-        //proposalPool_proposal_add(eng->proposal_state_pool, new_prop_state);
-        if (eng->my_bcomm->my_level > 0) {
-            printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+    int judgment = (eng->prop_judgement_cb)(pbuf->data, eng->my_proposal);
 
-            //Add msg to queue_iar_pending in _bc_forward().
-            if(_bc_forward(eng, recv_msg_buf_in) == 0){
-                _vote_back(eng, new_prop_state, 1);
-            }
-
-        } else {//leaf rank, no forward, but need to vote right away
+    switch (judgment) {
+        case 0: {    //mine wins, others' declined
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
             queue_append(&(eng->queue_iar_pending), recv_msg_buf_in);
+            _vote_back(eng, new_prop_state, 0);
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-            _vote_back(eng, new_prop_state, 1);
+            break;
         }
 
-    } else {
-        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-        queue_append(&(eng->queue_iar_pending), recv_msg_buf_in);
-        _vote_back(eng, new_prop_state, 0);
-        printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+        case 1: {    // mine is declined, others' win. bcast decision immediately
+            if (eng->my_bcomm->my_level > 0) {
+                printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+
+                //Add msg to queue_iar_pending in _bc_forward().
+                if (_bc_forward(eng, recv_msg_buf_in) == 0) {//no need to fwd.
+                    _vote_back(eng, new_prop_state, 1);
+                }
+                if(eng->my_own_proposal.pid >= 0){//I'm an active rank
+                    _iar_decision_bcast(eng, eng->my_own_proposal.pid, 0);
+                }
+
+            } else {    //leaf rank, no forward, but need to vote right away
+                printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+                queue_append(&(eng->queue_iar_pending), recv_msg_buf_in);
+                printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+                _vote_back(eng, new_prop_state, 1);
+            }
+            break;
+        }
+
+        case 2: {//both win, forward both. vote back if no fwd.
+            if (_bc_forward(eng, recv_msg_buf_in) == 0) {//no need to fwd.
+                _vote_back(eng, new_prop_state, 1);
+            }
+            break;
+        }
+
+        default:
+            printf("%s:%u - rank = %03d: unknown judgment received: %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, judgment);
+            break;
     }
+
     pbuf_free(pbuf);
 
     return 0;
@@ -818,7 +846,7 @@ int _iar_vote_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
         }
 
     } else { //Votes for proposals in the state queue
-        int p_index = -1;
+
         printf("%s:%u - rank = %03d, received a vote from rank %03d for other's proposal, vote = %d.\n",
                 __func__, __LINE__, eng->my_bcomm->my_rank, msg_buf->irecv_stat.MPI_SOURCE, vote_buf->vote);
 
@@ -858,7 +886,7 @@ int _iar_decision_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf_in) {
     //update proposal_state_queue
     PBuf* decision_buf = malloc(sizeof(PBuf));
     pbuf_deserialize(msg_buf_in->data_buf, decision_buf);
-    //printf("%s: %d: rank = %03d, _iar_decision_handler decision: %d:%d\n", __func__, __LINE__, eng->my_bcomm->my_rank, decision_buf->pid, decision_buf->vote);
+    printf("%s: %d: rank = %03d, received a decision: %p = [%d:%d], prop_state = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg_buf_in, decision_buf->pid, decision_buf->vote, msg_buf_in->prop_state);
     //int index = proposalPool_get_index(eng->proposal_state_pool, decision_buf->pid);
 
     bcomm_GEN_msg_t* proposal_msg = _find_proposal_msg(eng, decision_buf->pid);
@@ -1101,14 +1129,14 @@ int _wait_only_queue_cleanup(bcomm_engine_t* eng){
 bcomm_GEN_msg_t* _find_proposal_msg(bcomm_engine_t* eng, ID pid){
     if(pid < 0)
         return NULL;
-    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+
     bcomm_GEN_msg_t* msg = eng->queue_iar_pending.head;
 
     if(!msg)
         return NULL;
 
     assert(msg->prop_state);
-    //printf("%s:%u - rank = %03d, msg->prop_state = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg->prop_state);
+
     while(msg){
         if(msg->prop_state->pid == pid){
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
@@ -1211,7 +1239,8 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
                 eng->fwd_queued++;
             }else{//iar_proposal, decision
                 //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-                queue_append(&(eng->queue_iar_pending), msg_in);
+                if(status.MPI_TAG != IAR_DECISION)
+                    queue_append(&(eng->queue_iar_pending), msg_in);
                 eng->fwd_queued++;
             }
         } /* end if */
@@ -1243,7 +1272,8 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
                         eng->fwd_queued++;
                     }else{//iar_proposal, decision
                         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-                        queue_append(&(eng->queue_iar_pending), msg_in);
+                        if(status.MPI_TAG != IAR_DECISION)
+                            queue_append(&(eng->queue_iar_pending), msg_in);
                         eng->fwd_queued++;
                     }
 
@@ -1257,7 +1287,8 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
                         eng->fwd_queued++;
                     }else{//iar_proposal, decision
                         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-                        queue_append(&(eng->queue_iar_pending), msg_in);
+                        if(status.MPI_TAG != IAR_DECISION)
+                            queue_append(&(eng->queue_iar_pending), msg_in);
                         eng->fwd_queued++;
                     }
                 }
@@ -1270,7 +1301,8 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
                     eng->fwd_queued++;
                 } else {//iar_proposal, decision
                     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-                    queue_append(&(eng->queue_iar_pending), msg_in);
+                    if(status.MPI_TAG != IAR_DECISION)
+                        queue_append(&(eng->queue_iar_pending), msg_in);
                     eng->fwd_queued++;
                 }
             }
@@ -1286,7 +1318,8 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
             eng->fwd_queued++;
         }else{
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-            queue_append(&(eng->queue_iar_pending), msg_in);
+            if(status.MPI_TAG != IAR_DECISION)
+                queue_append(&(eng->queue_iar_pending), msg_in);
         }
     }
     return send_cnt;
@@ -1355,7 +1388,6 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
 /* ----------------------------------------------------------------------- */
 
 
-int proposal_compete(char* p1, char* p2);
 
 int proposal_state_init(proposal_state* new_prop_state, bcomm_GEN_msg_t* prop_msg_in) {
     if(!new_prop_state)
@@ -1784,18 +1816,6 @@ int proposal_agree(char* p1, char* p2) {
 //        return 0;
 }
 
-//Return 0 if p1 wins, otherwise return 1.
-int proposal_compete(char* p1, char* p2) {//int proposal_compete(char* p1, int rank1,  char* p2, int rank2)
-//    if(p1[0] == p2[0]) {
-//        return (rank1 < rank2) ? rank1 : rank2;
-//    }
-
-    if(p1[0] >= p2[0]) {
-        return 1;//0
-    } else
-        return 0;//1
-}
-
 //no_rank: the rank that votes "NO".
 int test_IAllReduce_single_proposal(bcomm* my_bcomm, int starter, int no_rank, int agree) {
     bcomm_engine_t* eng = progress_engine_new(my_bcomm, &is_proposal_approved_cb, NULL, &proposal_action_cb);
@@ -1925,8 +1945,8 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2, 
 
         //result = iAllReduceStart(my_bcomm, my_proposal, len, my_bcomm->my_rank);
         int my_proposal_id = eng->my_bcomm->my_rank;
-        char* proposal_2 = "333";
 
+        char* proposal_2 = "333";
 
         if(agree){
             eng->my_proposal = my_proposal;
@@ -1934,9 +1954,8 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2, 
             eng->my_proposal = proposal_2;
             eng->app_ctx = "55";
         }
-
-
-        ret = _iar_submit_proposal(eng, proposal_2, strlen(proposal_2), my_proposal_id);
+        usleep(10);
+        ret = _iar_submit_proposal(eng, eng->my_proposal, strlen(eng->my_proposal), my_proposal_id);
         if (ret > -1) { //done
             result = eng->my_own_proposal.vote;
             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
@@ -1946,10 +1965,10 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2, 
             }
             result = eng->my_own_proposal.vote;
         }
-        printf("%s:%u - rank = %03d: proposal completed, decision = %d \n", __func__, __LINE__, my_bcomm->my_rank,
-                result);
+        printf("%s:%u - rank = %03d: proposal completed, decision = %d:%d \n", __func__, __LINE__,
+                my_bcomm->my_rank, my_bcomm->my_rank, result);
 
-    }else {
+    } else {
         usleep(200);
 //        if (eng->my_bcomm->my_rank  == no_rank) {// Passive opponent
 //            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
@@ -1972,7 +1991,7 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2, 
         if(agree){
             eng->my_proposal = my_proposal;
         } else {
-            eng->my_proposal = "555";
+            eng->my_proposal = my_proposal;
             eng->app_ctx = "55";
         }
         int tag_recv = -1;
@@ -2012,10 +2031,7 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2, 
                 pbuf_free(pbuf);
             }
         } while (tag_recv != IAR_DECISION);
-
     }
-
-//    MPI_Barrier(eng->my_bcomm->my_comm);
 
     if(eng->my_bcomm->my_rank == active_1 || eng->my_bcomm->my_rank == active_2) {
         if (result) {
@@ -2024,7 +2040,7 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2, 
             printf("\n\n Active rank %d: =========== decision: Proposal declined =========== \n\n", eng->my_bcomm->my_rank);
         }
     }
-    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+
     engine_cleanup(eng);
 
     return -1;
@@ -2303,10 +2319,10 @@ int main(int argc, char** argv) {
     int init_rank = atoi(argv[1]);
     int no_rank = atoi(argv[2]); //Rank that says 'NO'
     int agree = atoi(argv[3]);
-    test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank, agree);
+//    test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank, agree);
 
 
-//    test_IAllReduce_multi_proposal(my_bcomm, init_rank, no_rank, agree);
+    test_IAllReduce_multi_proposal(my_bcomm, init_rank, no_rank, agree);
 //    test_callback();
 
 
