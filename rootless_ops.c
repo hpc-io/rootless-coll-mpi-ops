@@ -780,7 +780,6 @@ int _iar_vote_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
             }
         }
     }
-
     return 0;
 }
 
@@ -1795,6 +1794,50 @@ int test_IAllReduce_single_proposal(bcomm* my_bcomm, int starter, int no_rank, i
     return -1;
 }
 
+//Test case utility, used ONLY by a rank that has submitted a proposal.
+int testcase_decision_receiver(bcomm_engine_t* eng, int decision_needed){
+    make_progress_gen(eng, NULL);
+
+    bcomm_GEN_msg_t* pickup_out = NULL;
+    int decision_cnt = 0;
+    int tag_recv = -1;
+    while (decision_needed > decision_cnt) {
+        make_progress_gen(eng, NULL);
+        while (user_pickup_next(eng, &pickup_out)) {
+            make_progress_gen(eng, NULL);
+            //printf("%s:%u - rank = %03d: pickup_out = %p\n", __func__, __LINE__, my_bcomm->my_rank, pickup_out);
+            PBuf* pbuf = malloc(sizeof(PBuf));
+            pbuf_deserialize(pickup_out->data_buf, pbuf);
+
+            tag_recv = pickup_out->irecv_stat.MPI_TAG;
+            //printf("%s:%u - rank = %03d: tag_recv = %d\n", __func__, __LINE__, my_bcomm->my_rank, tag_recv);
+            switch (tag_recv) { //pickup_out->irecv_stat.MPI_TAG
+                case IAR_PROPOSAL: //2
+                    printf("Rank %d: Received proposal: %d:%s.\n", eng->my_bcomm->my_rank, pbuf->pid,
+                            pbuf->data);
+                    break;
+                case IAR_VOTE: //3
+                    printf("Rank %d: Received vote: %d:%d.\n", eng->my_bcomm->my_rank, pbuf->pid, pbuf->vote);
+                    break;
+                case IAR_DECISION: //4
+                    decision_cnt++;
+                    printf("Rank %d: Received decision: %d:%d, decision_cnt = %d, needed %d\n", eng->my_bcomm->my_rank, pbuf->pid,
+                            pbuf->vote, decision_cnt, decision_needed);
+                    break;
+
+                default:
+                    printf("Warning: Rank %d: Received unexpected msg, tag = %d.\n", eng->my_bcomm->my_rank,
+                            tag_recv);
+                    break;
+            }
+            user_msg_done(eng, pickup_out);
+            pickup_out = NULL;
+            pbuf_free(pbuf);
+        }
+    }
+    return decision_cnt;
+}
+
 int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2_mod, int agree) {
     bcomm_engine_t* eng = progress_engine_new(my_bcomm, &is_proposal_approved_cb, NULL, &proposal_action_cb);
     char* my_proposal = "555";
@@ -1802,34 +1845,33 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2_m
     int result = -1;
     int ret = -1;
     //Rank 0, first active, mod active rank
-    int decision_needed = 2;//1 + (my_bcomm->world_size - 1) / active_2_mod + 1;
+    int decision_needed = 1 + (my_bcomm->world_size - 1) / active_2_mod + 1;
 
     int decision_cnt = 0;
-
+    int tag_recv = -1;
     //printf("Rank %d: send_channel_cnt = %d, send_list_len = %d\n", my_bcomm->my_rank, my_bcomm->send_channel_cnt, my_bcomm->send_list_len);
     if (eng->my_bcomm->my_rank == active_1) {
         printf(" \n-------- First active rank %d--------\n\n", eng->my_bcomm->my_rank);
         printf("\n%s:%u - rank = %03d:  world_size = %d, mod = %d, %d decisions are needed. \n\n",
                 __func__, __LINE__, my_bcomm->my_rank, my_bcomm->world_size, active_2_mod, decision_needed);
 
-        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
-
-        //result = iAllReduceStart(my_bcomm, my_proposal, len, my_bcomm->my_rank);
         int my_proposal_id = eng->my_bcomm->my_rank;
          ret = _iar_submit_proposal(eng, my_proposal, strlen(my_proposal), my_proposal_id);
          if(ret > -1){//done
              result = eng->my_own_proposal.vote;
-             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
          }else{//sample application logic loop
              while(check_proposal_state(eng, 0) != COMPLETED){
                  make_progress_gen(eng, NULL);
              }
              result = eng->my_own_proposal.vote;
+
+             make_progress_gen(eng, NULL);
+             testcase_decision_receiver(eng, decision_needed - 1);
          }
         printf("\n        %s:%u - rank = %03d: active proposal completed, decision = %d \n",
                 __func__, __LINE__, my_bcomm->my_rank, result);
 
-    } else if (eng->my_bcomm->my_rank == active_2_mod ) {
+    } else if (eng->my_bcomm->my_rank % active_2_mod == 0) {
         printf(" \n-------- Mod active rank %d--------\n\n", eng->my_bcomm->my_rank);
         char prop_var[16] = "";
         sprintf(prop_var, "%d_%d", my_bcomm->my_rank, my_bcomm->my_rank);
@@ -1843,66 +1885,33 @@ int test_IAllReduce_multi_proposal(bcomm* my_bcomm, int active_1, int active_2_m
             eng->my_proposal = prop_var;
             eng->app_ctx = "55";
         }
-        usleep(10);
+        //usleep(10);
         ret = _iar_submit_proposal(eng, eng->my_proposal, strlen(eng->my_proposal), my_proposal_id);
         if (ret > -1) { //done
             result = eng->my_own_proposal.vote;
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_bcomm->my_rank);
         } else { //sample application logic loop
             while (check_proposal_state(eng, 0) != COMPLETED) {
                 make_progress_gen(eng, NULL);
             }
             result = eng->my_own_proposal.vote;
-        }
+
+            make_progress_gen(eng, NULL);
+            testcase_decision_receiver(eng, decision_needed - 1);
+        }//eld else: ret <= -1.
 
         printf("\n        %s:%u - rank = %03d: active proposal completed, decision = %d \n",
                 __func__, __LINE__, my_bcomm->my_rank, result);
 
     } else {
-        usleep(200);
-
         if(agree){
             eng->my_proposal = my_proposal;
         } else {
             eng->my_proposal = my_proposal;
             eng->app_ctx = "55";
         }
-        int tag_recv = -1;
-        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-        do {
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-            make_progress_gen(eng, NULL);
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-            bcomm_GEN_msg_t* pickup_out = NULL;
-            usleep(300);
-            while(user_pickup_next(eng, &pickup_out)){
-                //printf("%s:%u - rank = %03d: pickup_out = %p\n", __func__, __LINE__, my_bcomm->my_rank, pickup_out);
-                PBuf* pbuf = malloc(sizeof(PBuf));
-                pbuf_deserialize(pickup_out->data_buf, pbuf);
 
-                tag_recv = pickup_out->irecv_stat.MPI_TAG;
-                //printf("%s:%u - rank = %03d: tag_recv = %d\n", __func__, __LINE__, my_bcomm->my_rank, tag_recv);
-                switch (tag_recv) {//pickup_out->irecv_stat.MPI_TAG
-                    case IAR_PROPOSAL: //2
-                        printf("Rank %d: Received proposal: %d:%s.\n", eng->my_bcomm->my_rank, pbuf->pid, pbuf->data);
-                        break;
-                    case IAR_VOTE: //3
-                        printf("Rank %d: Received vote: %d:%d.\n", eng->my_bcomm->my_rank, pbuf->pid, pbuf->vote);
-                        break;
-                    case IAR_DECISION: //4
-                        decision_cnt++;
-                        printf("Rank %d: Received decision: %d:%d\n", eng->my_bcomm->my_rank, pbuf->pid, pbuf->vote);
-                        break;
-
-                    default:
-                        printf("Warning: Rank %d: Received unexpected msg, tag = %d.\n", eng->my_bcomm->my_rank, tag_recv);
-                        break;
-                }
-                user_msg_done(eng, pickup_out);
-                pickup_out = NULL;
-                pbuf_free(pbuf);
-            }
-        } while (decision_needed > decision_cnt);
+        make_progress_gen(eng, NULL);
+        testcase_decision_receiver(eng, decision_needed);
     }
 
     if(eng->my_bcomm->my_rank == active_1 || eng->my_bcomm->my_rank == active_2_mod) {
