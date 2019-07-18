@@ -85,6 +85,12 @@ void get_time_str(char *str_out) {
     sprintf(str_out, "%d:%d:%d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 }
 
+int get_my_rank(){
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    return my_rank;
+}
+
 int get_level(int world_size, int rank);
 
 int proposal_state_init(proposal_state* pp_in_out, bcomm_GEN_msg_t* prop_msg_in);
@@ -114,13 +120,24 @@ typedef struct isend_state{
 }isend_state;
 
 typedef struct bcomm_IAR_state bcomm_IAR_state_t;
+
+struct Proposal_state{
+    ID pid; // proposal ID, default = -1;
+    int recv_proposal_from;             /* The rank from where I received a proposal, also report votes to this rank. */
+//    int proposal_sent_cnt;
+    Vote vote; //accumulated vote, default = 1;
+    int votes_needed; //num of votes needed to report to parent, equals to the number of sends of a proposal
+    int votes_recved;
+    Req_stat state; //the state of this proposal: COMPLETED, IN_PROGRESS or FAILED.
+    bcomm_GEN_msg_t* proposal_msg;//the last place holds a proposal, should be freed when decision is made and executed.
+    bcomm_GEN_msg_t* decision_msg;
+}; //clear when vote result is reported.
+
 struct bcomm_IAR_state_t {
     proposal_state prop_state;
     //enum State_IAR iar_state;
     bcomm_IAR_state_t *next, *prev;
 };
-
-//typedef int (*bcomm_IAR_approval_cb_func_t)(const void *msg_buf, void *app_ctx);
 
 struct bcomm_progress_engine {
     bcomm *my_bcomm;
@@ -208,7 +225,10 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg);//new version
 bcomm_GEN_msg_t* msg_new_generic(bcomm_engine_t* eng) {
     bcomm_GEN_msg_t* new_msg = calloc(1, sizeof(bcomm_GEN_msg_t));
     //printf("%s:%u - rank = %03d: new_msg = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, new_msg);
-    new_msg->data_buf = new_msg->buf + sizeof(int);
+    new_msg->msg_usr.pid = -1;
+    new_msg->msg_usr.type = -1;
+    new_msg->msg_usr.vote = -1;
+    new_msg->data_buf = new_msg->msg_usr.buf + sizeof(int);
     new_msg->bc_isend_reqs = calloc(eng->my_bcomm->send_list_len, sizeof(MPI_Request));
     new_msg->bc_isend_stats = calloc(eng->my_bcomm->send_list_len, sizeof(MPI_Status));
     new_msg->pickup_done = 0;
@@ -218,7 +238,7 @@ bcomm_GEN_msg_t* msg_new_generic(bcomm_engine_t* eng) {
     new_msg->send_cnt = 0;
 
     // Set msg origin
-    memcpy(new_msg->buf, &(eng->my_bcomm->my_rank), sizeof(int));
+    memcpy(new_msg->msg_usr.buf, &(eng->my_bcomm->my_rank), sizeof(int));
 
     return new_msg;
 }
@@ -481,7 +501,7 @@ int _post_irecv_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf_in_out, enum C
     if(rcv_tag == ANY_TAG)
         rcv_tag = MPI_ANY_TAG;
     msg_buf_in_out->post_irecv_type =  rcv_tag;
-    int ret = MPI_Irecv(msg_buf_in_out->buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, rcv_tag, eng->my_bcomm->my_comm, &(msg_buf_in_out->irecv_req));
+    int ret = MPI_Irecv(msg_buf_in_out->msg_usr.buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR, MPI_ANY_SOURCE, rcv_tag, eng->my_bcomm->my_comm, &(msg_buf_in_out->irecv_req));
     //msg_buf_in_out->id_debug = 1;
 //    printf("%s:%u - rank = %03d, irecv posted on msg = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg_buf_in_out);
     return ret;
@@ -510,7 +530,7 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
 
     PBuf* pbuf = malloc(sizeof(PBuf));
 
-    int origin = get_origin(recv_msg_buf_in->buf);
+    int origin = get_origin(recv_msg_buf_in->msg_usr.buf);
 
     pbuf_deserialize(recv_msg_buf_in->data_buf, pbuf);
 
@@ -798,6 +818,8 @@ int _gen_bc_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in) {
 // Assuming the msg will be copied and stay safe, and will be unlinked from pickup_queue.
 // The user should free msg_out when it's done.
 // NOTE: if this function is called in a thread different from the progress_engine thread, there will be a thread safe issue.
+
+
 int user_pickup_next(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out) {
     assert(eng);
     bcomm_GEN_msg_t* msg = eng->queue_wait_and_pickup.head;
@@ -824,13 +846,12 @@ int user_pickup_next(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out) {
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         return 0;
     } else { //not empty, find the first available in queue_pickup
-        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         while (msg) {
             bcomm_GEN_msg_t* msg_t = msg->next;
 
             if (!msg->pickup_done) { //return a msg
                 queue_remove(&(eng->queue_pickup), msg);
-                // mark pickup_done in user_msg_done()
+                // mark pickup_done and free the msg in user_msg_done()
                 *msg_out = msg;
 
                 return 1;
@@ -988,7 +1009,7 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
     eng->my_bcomm->bcast_recv_cnt++;
 
     /* Set buffer that message was received in */
-    recv_buf = msg_in->buf;
+    recv_buf = msg_in->msg_usr.buf;
     msg_in->send_cnt = 0;
     /* Check for a rank that can forward messages */
     int send_cnt = 0;;
@@ -1001,14 +1022,15 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
         if (status.MPI_SOURCE > eng->my_bcomm->last_wall) {
             /* Send messages, to further ranks first */
             for (int j = eng->my_bcomm->send_channel_cnt; j >= 0; j--) {
-                MPI_Isend(msg_in->buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR,
+                MPI_Isend(msg_in->msg_usr.buf, eng->my_bcomm->msg_size_max + sizeof(int), MPI_CHAR,
                         eng->my_bcomm->send_list[j], status.MPI_TAG, eng->my_bcomm->my_comm,
                         &(msg_in->bc_isend_reqs[j]));
                 send_cnt++;
                 msg_in->send_cnt++;
-                //printf("%s:%u my rank = %03d, forward to rank %d, data = [%d]\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->my_bcomm->send_list[j], *(int*)(msg_in->data_buf));
+                //printf("%s:%u my rank = %03d, forward to rank %d, data = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->my_bcomm->send_list[j], (char*)(msg_in->data_buf));
             }
             //printf("%s:%u my rank = %03d, append to queue_wait_and_pickup queue, msg = %s\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg_in->data_buf);
+
             if(status.MPI_TAG == BCAST){//bc
                 queue_append(&(eng->queue_wait_and_pickup), msg_in);
                 eng->fwd_queued++;
@@ -1029,12 +1051,12 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
                 /* Send messages, to further ranks first */
                 for (int j = upper_bound; j >= 0; j--) {
                     if (check_passed_origin(eng->my_bcomm, origin, eng->my_bcomm->send_list[j]) == 0) {
-                        MPI_Isend(msg_in->buf, eng->my_bcomm->msg_size_max, MPI_CHAR, eng->my_bcomm->send_list[j],
+                        MPI_Isend(msg_in->msg_usr.buf, eng->my_bcomm->msg_size_max, MPI_CHAR, eng->my_bcomm->send_list[j],
                                 status.MPI_TAG, eng->my_bcomm->my_comm,
                                 &(msg_in->bc_isend_reqs[j]));
                         send_cnt++;
                         msg_in->send_cnt++;
-                        //printf("%s:%u my rank = %03d, forward to rank %d, data = [%d]\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->my_bcomm->send_list[j], *(int*)(msg_in->data_buf));
+                        //printf("%s:%u my rank = %03d, forward to rank %d, data = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->my_bcomm->send_list[j], (char*)(msg_in->data_buf));
                     }
                 }// end for
                 //printf("%s:%u - rank = %03d, msg = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg_in);
@@ -1055,7 +1077,7 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
                 } else {
                     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
                     //printf("%s:%u my rank = %03d, append to queue_pickup queue, msg = %s\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg_in->data_buf);
-                    if(status.MPI_SOURCE == BCAST){
+                    if(status.MPI_TAG == BCAST){
                         msg_in->fwd_done = 1;
                         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
                         queue_append(&(eng->queue_pickup), msg_in);
@@ -1070,8 +1092,10 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
             } /* end if */
             else {
                 //printf("%s:%u - rank = %03d Something is wrong... upper_bound = %d, add to pickup queue. msg = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, upper_bound, msg_in->data_buf);
+                //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
                 if(status.MPI_TAG == BCAST){
                     msg_in->fwd_done = 1;
+                    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
                     queue_append(&(eng->queue_pickup), msg_in);
                     eng->fwd_queued++;
                 } else {//iar_proposal, decision
@@ -1088,7 +1112,9 @@ int _bc_forward(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in) {
         msg_in->fwd_done = 1;
 
         //printf("%s:%u my rank = %03d, append to queue_pickup queue, msg = %s\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg_in->data_buf);
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         if(status.MPI_TAG == BCAST){
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
             queue_append(&(eng->queue_pickup), msg_in);
             eng->fwd_queued++;
         }else{
@@ -1463,7 +1489,7 @@ int bcast_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in, enum COM_TAGS tag) {
 
     /* Send to all receivers, further away first */
     for (int i = my_bcomm->send_list_len - 1; i >= 0; i--) {
-        MPI_Isend(msg_in->buf, my_bcomm->msg_size_max, MPI_CHAR, my_bcomm->send_list[i], tag, my_bcomm->my_comm,
+        MPI_Isend(msg_in->msg_usr.buf, my_bcomm->msg_size_max, MPI_CHAR, my_bcomm->send_list[i], tag, my_bcomm->my_comm,
             &(msg_in->bc_isend_reqs[i]));
         msg_in->send_cnt++;
     }
@@ -1493,24 +1519,24 @@ int engine_cleanup(bcomm_engine_t* eng){
     MPI_Request req;
     MPI_Status stat_out1;
     int done = 0;
-
+    int my_rank = get_my_rank();
     bcomm_GEN_msg_t* recv_msg;
-
+    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     MPI_Iallreduce(&(eng->sent_bcast_cnt), &total_bcast, 1, MPI_INT, MPI_SUM, eng->my_bcomm->my_comm, &req);
-
+    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     do {
         MPI_Test(&req, &done, &stat_out1);// test for MPI_Iallreduce.
         if (!done) {
             make_progress_gen(eng, &recv_msg);
         }
     } while (!done);
-
+    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
 
     // Core cleanup section
     while (eng->recved_bcast_cnt + eng->sent_bcast_cnt < total_bcast) {
         make_progress_gen(eng, &recv_msg);
     }
-
+    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     recv_msg = NULL;
     bcomm_GEN_msg_t* pickup_out = NULL;
     while(user_pickup_next(eng, &pickup_out)){
@@ -1523,8 +1549,32 @@ int engine_cleanup(bcomm_engine_t* eng){
     return 0;
 }
 
+int proposal_reset(proposal_state* ps){
+    assert(ps);
+    if(ps->decision_msg)
+        msg_free(ps->decision_msg);
+    ps->decision_msg = NULL;
+    if(ps->proposal_msg)
+        msg_free(ps->proposal_msg);
+    ps->proposal_msg = NULL;
+
+    ps->pid = -1;
+    ps->recv_proposal_from = -1;
+    ps->state = INVALID;
+    ps->vote = -1;
+    ps->votes_needed = 0;
+    ps->votes_recved = 0;
+
+    return 0;
+}
+
 int get_vote_my_proposal(bcomm_engine_t* eng){
-    return eng->my_own_proposal.vote;
+    if(eng->my_own_proposal.state != COMPLETED){
+        return -1;
+    }
+    int ret = eng->my_own_proposal.vote;
+    proposal_reset(&(eng->my_own_proposal));
+    return ret;
 }
 
 int native_benchmark_single_point_bcast(MPI_Comm my_comm, int root_rank, int cnt, int buf_size) {

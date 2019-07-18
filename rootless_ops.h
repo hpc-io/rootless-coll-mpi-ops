@@ -79,20 +79,19 @@ bcomm_engine_t* progress_engine_new(bcomm* my_bcomm, void* approv_cb_func, void*
 
 typedef struct bcomm_generic_msg bcomm_GEN_msg_t;
 typedef struct Proposal_state proposal_state;
-struct Proposal_state{
-    ID pid; // proposal ID, default = -1;
-    int recv_proposal_from;             /* The rank from where I received a proposal, also report votes to this rank. */
-//    int proposal_sent_cnt;
-    Vote vote; //accumulated vote, default = 1;
-    int votes_needed; //num of votes needed to report to parent, equals to the number of sends of a proposal
-    int votes_recved;
-    Req_stat state; //the state of this proposal: COMPLETED, IN_PROGRESS or FAILED.
-    bcomm_GEN_msg_t* proposal_msg;//the last place holds a proposal, should be freed when decision is made and executed.
-    bcomm_GEN_msg_t* decision_msg;
-}; //clear when vote result is reported.
+
+struct user_msg{
+    char buf[MSG_SIZE_MAX + sizeof(int)];
+    int type;
+    ID pid;
+    Vote vote;//0 = vote NO, 1 = vote yes, -1 = proposal, -2 = decision.
+    unsigned int data_len;
+    char* data;
+};
 
 struct bcomm_generic_msg{
-    char buf[MSG_SIZE_MAX + sizeof(int)];// Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
+    //char buf[MSG_SIZE_MAX + sizeof(int)];// Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
+    struct user_msg msg_usr;
     char* data_buf; //= buf + sizeof(int), so data_buf size is MSG_SIZE_MAX
     int id_debug;
 
@@ -133,7 +132,6 @@ int get_vote_my_proposal(bcomm_engine_t* eng);
 int user_pickup_next(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out);
 int user_msg_done(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in);
 
-
-
-
+int proposal_reset(proposal_state* ps);
+int get_my_rank();
 #endif /* ROOTLESS_OPS_H_ */
