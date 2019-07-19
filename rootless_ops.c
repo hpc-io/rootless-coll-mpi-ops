@@ -1,3 +1,9 @@
+/*
+ * rootless_ops.c
+ *
+ *  Created on: Aug, 2018
+ *      Author: Tonglin Li
+ */
 
 #include "rootless_ops.h"
 //#include "progress_engine.h"
@@ -237,9 +243,10 @@ bcomm_GEN_msg_t* msg_new_generic(bcomm_engine_t* eng) {
     new_msg->next = NULL;
     new_msg->send_cnt = 0;
 
+    new_msg->msg_usr.data = new_msg->msg_usr.buf + sizeof(int);// == msg->data_buf.
     // Set msg origin
     memcpy(new_msg->msg_usr.buf, &(eng->my_bcomm->my_rank), sizeof(int));
-
+    *(int*)(new_msg->msg_usr.buf) = eng->my_bcomm->my_rank;
     return new_msg;
 }
 
@@ -589,7 +596,7 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
 
 int _vote_back(bcomm_engine_t* eng, proposal_state* ps, Vote vote){
     printf("%s:%u - rank = %03d, vote back to rank %d, for pid = %d, vote = %d.\n", __func__, __LINE__,eng->my_bcomm->my_rank, ps->recv_proposal_from, ps->pid, vote);
-    unsigned int send_len = 0;
+    size_t send_len = 0;
     char send_buf[MSG_SIZE_MAX+1] = "";
 
     memcpy(send_buf, &(eng->my_bcomm->my_rank), sizeof(int));
@@ -746,7 +753,7 @@ int iar_submit_proposal(bcomm_engine_t* eng, char* proposal, unsigned long prop_
 //    printf("%s:%u - rank = %03d, send_list_len = %d\n",
 //            __func__, __LINE__, eng->my_bcomm->my_rank, eng->my_bcomm->send_list_len);
     char proposal_send_buf[MSG_SIZE_MAX] = "";
-    unsigned buf_len;
+    size_t buf_len;
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     if(0 != pbuf_serialize(my_proposal_id, 1, prop_size, proposal, proposal_send_buf, &buf_len)) {
         printf("pbuf_serialize failed.\n");
@@ -774,11 +781,23 @@ int iar_submit_proposal(bcomm_engine_t* eng, char* proposal, unsigned long prop_
 }
 
 int _iar_decision_bcast(bcomm_engine_t* eng, ID my_proposal_id, Vote decision){
-    unsigned send_len = 0;
+    size_t send_len = 0;
     char decision_send_buf[64] = "";
-    pbuf_serialize(my_proposal_id, decision, 0, NULL, decision_send_buf, &send_len);
+    char debug_info[16] = "IAR_DEC";
+    pbuf_serialize(my_proposal_id, decision, strlen(debug_info), debug_info, decision_send_buf, &send_len);
     bcomm_GEN_msg_t* decision_msg = msg_new_bc(eng, decision_send_buf, 64);
     //printf("%s:%u - rank = %03d, new decision msg = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, decision_msg);
+    int my_rank = get_my_rank();
+    printf("%s:%u - rank = %03d, strlen(debug_info) = %lu, pid = %d, vote = %d, data_len = %lu, data = [%s]\n", __func__, __LINE__, my_rank,
+            strlen(debug_info),
+            *((ID*)decision_send_buf), *((Vote*)(decision_send_buf + sizeof(ID))), *((size_t*)(decision_send_buf
+                    + sizeof(ID) + sizeof(Vote))), (char*)(decision_send_buf + sizeof(ID) + sizeof(Vote)
+                            + sizeof(size_t)));
+    PBuf* t = malloc(sizeof(PBuf));
+    pbuf_deserialize(decision_send_buf, t);
+
+    printf("%s:%u - rank = %03d, pid = %d, vote = %d, data_len = %lu, data = [%s]\n", __func__, __LINE__, my_rank,
+            t->pid, t->vote, t->data_len, t->data);
     bcast_gen(eng, decision_msg, IAR_DECISION);
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     eng->my_own_proposal.decision_msg = decision_msg;
@@ -814,17 +833,44 @@ int _gen_bc_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in) {
     return -1;
 }
 
+
+user_msg* user_msg_mock(bcomm_GEN_msg_t* gen_msg_in){
+    assert(gen_msg_in);
+    user_msg* msg_out = (user_msg*)gen_msg_in;
+
+    msg_out->type = gen_msg_in->irecv_stat.MPI_TAG;
+
+//    int my_rank = get_my_rank();
+//    printf("Rank %d:  usr_msg content before: type = %d, pid = %d, vote = %d, data = [%s], data_len = %d\n",
+//            my_rank, msg_out->type, msg_out->pid, msg_out->vote, msg_out->data, msg_out->data_len);
+
+    if(msg_out->type == IAR_DECISION){
+            PBuf* pbuf = malloc(sizeof(PBuf));
+            pbuf_deserialize(gen_msg_in->data_buf, pbuf);
+
+            msg_out->pid = pbuf->pid;
+            msg_out->vote = pbuf->vote;
+            msg_out->data = pbuf->data;
+            msg_out->data_len = pbuf->data_len;
+            free(pbuf);//to keep msg_out->data valid, Don't use pbuf_free() here!!
+    }
+
+//    printf("Rank %d:  usr_msg content after: type = %d, pid = %d, vote = %d, data = [%s], data_len = %d\n",
+//            my_rank, msg_out->type, msg_out->pid, msg_out->vote, msg_out->data, msg_out->data_len);
+
+    return msg_out;
+}
+
 // Called by the application/user, pickup a msg from the head of the queue.
 // Assuming the msg will be copied and stay safe, and will be unlinked from pickup_queue.
 // The user should free msg_out when it's done.
 // NOTE: if this function is called in a thread different from the progress_engine thread, there will be a thread safe issue.
 
-
-int user_pickup_next(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out) {
+int user_pickup_next(bcomm_engine_t* eng, user_msg** msg_out) {
     assert(eng);
     bcomm_GEN_msg_t* msg = eng->queue_wait_and_pickup.head;
     if (msg) {        //wait_and_pickup empty
-        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+
         while (msg) {
             bcomm_GEN_msg_t* msg_t = msg->next;
 
@@ -832,7 +878,9 @@ int user_pickup_next(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out) {
                 queue_remove(&(eng->queue_wait_and_pickup), msg);
                 // mark pickup_done in user_msg_done()
                 queue_append(&(eng->queue_wait), msg);
-                *msg_out = msg;
+                //printf("%s:%u - rank = %03d, buf = [%s], data = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg->msg_usr.buf, msg->msg_usr.data);
+                *msg_out = user_msg_mock(msg);
+
                 return 1;
             }
             msg = msg_t;
@@ -852,7 +900,8 @@ int user_pickup_next(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out) {
             if (!msg->pickup_done) { //return a msg
                 queue_remove(&(eng->queue_pickup), msg);
                 // mark pickup_done and free the msg in user_msg_done()
-                *msg_out = msg;
+                //printf("%s:%u - rank = %03d, buf = [%s], data = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg->msg_usr.buf, msg->msg_usr.data);
+                *msg_out = user_msg_mock(msg);
 
                 return 1;
             }
@@ -862,12 +911,14 @@ int user_pickup_next(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out) {
     return 0;
 }
 
-int user_msg_done(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in){
-    msg_in->pickup_done = 1;
-    if(msg_in->fwd_done){
+int user_msg_recycle(bcomm_engine_t* eng, user_msg* msg_in){
+    assert(eng && msg_in);
+    bcomm_GEN_msg_t* msg = (bcomm_GEN_msg_t*) msg_in;
+    msg->pickup_done = 1;
+    if(msg->fwd_done){
 //        printf("%s:%u - rank = %03d, msg_in.post_irecv_type = %d, send_type = %d\n",
 //                __func__, __LINE__, eng->my_bcomm->my_rank, msg_in->post_irecv_type, msg_in->send_type);
-        msg_free(msg_in);
+        msg_free(msg);
         return 1;
     }
     //still in wait queue
@@ -1269,7 +1320,10 @@ int proposalPools_reset(proposal_state* pools) {
     return 0;
 }
 
-int pbuf_serialize(ID pid_in, Vote vote, unsigned int data_len_in, char* data_in, char* buf_out, unsigned int* buf_len_out) {
+int pbuf_serialize(ID pid_in, Vote vote, size_t data_len_in, char* data_in,
+        char* buf_out, size_t* buf_len_out) {
+    assert(buf_out);//assume it's allocated or is a fixed-size array.
+
     if(data_len_in == 0) {
         if(data_in != NULL)
             return -1;
@@ -1278,18 +1332,25 @@ int pbuf_serialize(ID pid_in, Vote vote, unsigned int data_len_in, char* data_in
     if(!buf_out)
         return -1;
 
-    memcpy(buf_out, &pid_in, sizeof(ID));
-    memcpy(buf_out + sizeof(ID), &vote, sizeof(Vote));
-    memcpy(buf_out + sizeof(ID) + sizeof(Vote), &data_len_in, sizeof(unsigned int));
+    //memcpy(buf_out, &pid_in, sizeof(ID));
+    *((ID*)buf_out) = pid_in;
+    //memcpy(buf_out + sizeof(ID), &vote, sizeof(Vote));
+    *((Vote*)(buf_out + sizeof(ID))) = vote;
+    //memcpy(buf_out + sizeof(ID) + sizeof(Vote), &data_len_in, sizeof(unsigned int));
+    *((size_t*)(buf_out + sizeof(ID) + sizeof(Vote))) = data_len_in;
 
     if(data_len_in != 0)
-        memcpy(buf_out + sizeof(ID) + sizeof(Vote) + sizeof(unsigned int), data_in, data_len_in);
+        memcpy(buf_out + sizeof(ID) + sizeof(Vote) + sizeof(size_t), data_in, data_len_in);
     if(buf_len_out) {
         *buf_len_out = sizeof(ID)  /* SN */
             + sizeof(Vote)          /* vote/decision */
-            + sizeof(unsigned int)  /* data_len */
+            + sizeof(size_t)  /* data_len */
             + data_len_in;          /* data */
     }
+
+    int my_rank = get_my_rank();
+    printf("%s:%u - rank = %03d, pid = %d, vote = %d, data_len = %lu, data = [%s]\n", __func__, __LINE__, my_rank,
+            *((ID*)buf_out), *((Vote*)(buf_out + sizeof(ID))), *((size_t*)(buf_out + sizeof(ID) + sizeof(Vote))), (char*)(buf_out + sizeof(ID) + sizeof(Vote) + sizeof(size_t)));
     return 0;
 }
 
@@ -1302,13 +1363,16 @@ void pbuf_free(PBuf* pbuf) {
 int pbuf_deserialize(char* buf_in, PBuf* pbuf_out) {
     if(!buf_in || !pbuf_out)
         return -1;
-    memcpy(&(pbuf_out->pid), buf_in, sizeof(ID));
-    memcpy(&(pbuf_out->vote), buf_in + sizeof(ID), sizeof(Vote));
-    memcpy(&(pbuf_out->data_len), buf_in + sizeof(ID) + sizeof(Vote), sizeof(unsigned int));
+    pbuf_out->pid = *((ID*)buf_in);
+
+    pbuf_out->vote = *((Vote*)(buf_in + sizeof(ID)));
+
+    pbuf_out->data_len = *((size_t*)(buf_in + sizeof(ID) + sizeof(Vote)));
 
     pbuf_out->data = malloc(MSG_SIZE_MAX - sizeof(ID));
+    memcpy(pbuf_out->data, buf_in + sizeof(ID) + sizeof(Vote) + sizeof(size_t), pbuf_out->data_len);
+    //pbuf_out->data = (char*) buf_in + sizeof(ID) + sizeof(Vote) + sizeof(unsigned int);
 
-    memcpy(pbuf_out->data, buf_in + sizeof(ID) + sizeof(Vote) + sizeof(unsigned int), pbuf_out->data_len);
     return 0;
 }
 
@@ -1538,7 +1602,7 @@ int engine_cleanup(bcomm_engine_t* eng){
     }
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     recv_msg = NULL;
-    bcomm_GEN_msg_t* pickup_out = NULL;
+    user_msg* pickup_out = NULL;
     while(user_pickup_next(eng, &pickup_out)){
         total_pickup++;
         //printf("%s:%u - rank = %03d, pickup_out msg = [%s]\n", __func__, __LINE__, eng->my_bcomm->my_rank, pickup_out->data_buf);

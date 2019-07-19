@@ -92,7 +92,7 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
             bcomm_GEN_msg_t* send_msg = msg_new_bc(eng, buf, strlen(buf));
             sprintf(buf, "msg_No.%d", i);
             memcpy(send_msg->data_buf, buf, 64);
-            printf("Rank %d bcasting: msg = [%s]\n", my_rank, send_msg->data_buf);
+            printf("Rank %d bcasting: msg = [%s], msg_usr.data = [%s]\n", my_rank, send_msg->data_buf, send_msg->msg_usr.data);
             bcast_gen(eng, send_msg, BCAST);
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             make_progress_gen(eng, &recv_msg);
@@ -106,13 +106,13 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             make_progress_gen(eng, &recv_msg);
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
-            bcomm_GEN_msg_t* pickup_out = NULL;
+            user_msg* pickup_out = NULL;
             while(user_pickup_next(eng, &pickup_out)){
                 //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
                 recved_cnt++;
-                //printf("%s:%u - rank = %03d, received bcast msg:[%s], received %d already, expecting %d in total.\n", __func__, __LINE__,
-                        //my_rank, pickup_out->data_buf, recved_cnt, cnt);
-                //user_msg_done(eng, pickup_out);//free it here if(fwd_done)
+                printf("%s:%u - rank = %03d, received bcast msg:[%s], received %d already, expecting %d in total.\n", __func__, __LINE__,
+                        my_rank, pickup_out->data, recved_cnt, cnt);
+                user_msg_recycle(eng, pickup_out);//free it here if(fwd_done)
             }
             //sleep(1);
         } while(recved_cnt < cnt);
@@ -180,34 +180,34 @@ int test_IAllReduce_single_proposal(bcomm* my_bcomm, int starter, int no_rank, i
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             make_progress_gen(eng, NULL);
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
-            bcomm_GEN_msg_t* pickup_out = NULL;
+            user_msg* pickup_out = NULL;
             usleep(300);
             while(user_pickup_next(eng, &pickup_out)){
                 //printf("%s:%u - rank = %03d: pickup_out = %p\n", __func__, __LINE__, my_rank, pickup_out);
-                PBuf* pbuf = malloc(sizeof(PBuf));
+                //PBuf* pbuf = malloc(sizeof(PBuf));
                 //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
-                pbuf_deserialize(pickup_out->data_buf, pbuf);
+                //pbuf_deserialize(pickup_out->data_buf, pbuf);
 
-                tag_recv = pickup_out->irecv_stat.MPI_TAG;
+                tag_recv = pickup_out->type;
                 //printf("%s:%u - rank = %03d: tag_recv = %d\n", __func__, __LINE__, my_rank, tag_recv);
                 switch (tag_recv) {//pickup_out->irecv_stat.MPI_TAG
                     case IAR_PROPOSAL: //2
-                        printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pbuf->pid, pbuf->data);
+                        printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out->pid, pickup_out->data);
                         break;
                     case IAR_VOTE: //3
-                        printf("Rank %d: Received vote: %d:%d.\n", my_rank, pbuf->pid, pbuf->vote);
+                        printf("Rank %d: Received vote: %d:%d.\n", my_rank, pickup_out->pid, pickup_out->vote);
                         break;
                     case IAR_DECISION: //4
-                        printf("Rank %d: Received decision: %d:%d\n", my_rank, pbuf->pid, pbuf->vote);
+                        printf("Rank %d: Received decision: %d:%d\n", my_rank, pickup_out->pid, pickup_out->vote);
                         break;
 
                     default:
                         printf("Warning: Rank %d: Received unexpected msg, tag = %d.\n", my_rank, tag_recv);
                         break;
                 }
-                user_msg_done(eng, pickup_out);
+                user_msg_recycle(eng, pickup_out);
                 pickup_out = NULL;
-                pbuf_free(pbuf);
+
             }
         } while (tag_recv != IAR_DECISION);
     }
@@ -229,7 +229,7 @@ int testcase_decision_receiver(bcomm_engine_t* eng, int decision_needed){
     make_progress_gen(eng, NULL);
     int my_rank = get_my_rank();
 
-    bcomm_GEN_msg_t* pickup_out = NULL;
+    user_msg* pickup_out = NULL;
     int decision_cnt = 0;
     int tag_recv = -1;
     while (decision_cnt < decision_needed) {
@@ -237,23 +237,23 @@ int testcase_decision_receiver(bcomm_engine_t* eng, int decision_needed){
         while (user_pickup_next(eng, &pickup_out)) {
             make_progress_gen(eng, NULL);
             //printf("%s:%u - rank = %03d: pickup_out = %p\n", __func__, __LINE__, my_rank, pickup_out);
-            PBuf* pbuf = malloc(sizeof(PBuf));
-            pbuf_deserialize(pickup_out->data_buf, pbuf);
+            //PBuf* pbuf = malloc(sizeof(PBuf));
+            //pbuf_deserialize(pickup_out->data_buf, pbuf);
 
-            tag_recv = pickup_out->irecv_stat.MPI_TAG;
+            tag_recv = pickup_out->type;
             //printf("%s:%u - rank = %03d: tag_recv = %d\n", __func__, __LINE__, my_rank, tag_recv);
             switch (tag_recv) { //pickup_out->irecv_stat.MPI_TAG
                 case IAR_PROPOSAL: //2
-                    printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pbuf->pid,
-                            pbuf->data);
+                    printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out->pid,
+                            pickup_out->data);
                     break;
                 case IAR_VOTE: //3
-                    printf("Rank %d: Received vote: %d:%d.\n", my_rank, pbuf->pid, pbuf->vote);
+                    printf("Rank %d: Received vote: %d:%d.\n", my_rank, pickup_out->pid, pickup_out->vote);
                     break;
                 case IAR_DECISION: //4
                     decision_cnt++;
-                    printf("Rank %d: Received decision: %d:%d, decision_cnt = %d, needed %d\n",my_rank, pbuf->pid,
-                            pbuf->vote, decision_cnt, decision_needed);
+                    printf("Rank %d: Received decision: %d:%d, decision_cnt = %d, needed %d, data = [%s]\n",my_rank, pickup_out->pid,
+                            pickup_out->vote, decision_cnt, decision_needed, pickup_out->data);
                     break;
 
                 default:
@@ -261,9 +261,8 @@ int testcase_decision_receiver(bcomm_engine_t* eng, int decision_needed){
                             tag_recv);
                     break;
             }
-            user_msg_done(eng, pickup_out);
+            user_msg_recycle(eng, pickup_out);
             pickup_out = NULL;
-            pbuf_free(pbuf);
         }
     }
     return decision_cnt;
@@ -411,26 +410,33 @@ int hacky_sack_progress_engine(int cnt, bcomm* my_bcomm){
     bcast_gen(eng, prev_rank_bc_msg, BCAST);
     bcast_sent_cnt = 0;
 
-    bcomm_GEN_msg_t* pickup_out = NULL;
+    user_msg* pickup_out = NULL;
     int t = 0;
     while (bcast_sent_cnt < cnt) {
+        //sleep(1);
+        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
 
         make_progress_gen(eng, NULL);
 
         while(user_pickup_next(eng, &pickup_out)){
+            //sleep(1);
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             recv_msg_cnt++;
             total_pickup++;
-//            printf("%s:%u - rank = %03d, pickup_out msg = [%s]\n", __func__, __LINE__, my_rank, pickup_out->data_buf);
-            int recv_rank = atoi((pickup_out->data_buf));
-            user_msg_done(eng, pickup_out);
+            printf("%s:%u - rank = %03d, pickup_out msg = [%s]\n", __func__, __LINE__, my_rank, pickup_out->data);
+            int recv_rank = atoi((pickup_out->data));
+            user_msg_recycle(eng, pickup_out);
             //make_progress_gen(eng, NULL);
             if(recv_rank == my_rank){
+                //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
                 char buf[32] = "";
                 next_rank = get_next_rank(my_rank, world_size);
                 sprintf(buf, "%d", next_rank);
+                //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
                 bcomm_GEN_msg_t* next_msg_send = msg_new_bc(eng, buf, sizeof(buf));
                 bcast_gen(eng, next_msg_send, BCAST);
                 bcast_sent_cnt++;
+                //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
                 //make_progress_gen(eng, NULL);
             }
             //make_progress_gen(eng, NULL);
@@ -485,6 +491,7 @@ int main(int argc, char** argv) {
     int no_rank = atoi(argv[2]); //Rank that says 'NO'
     int agree = atoi(argv[3]);
 
+    //sleep(60);
     //test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank, agree);
 
     test_IAllReduce_multi_proposal(my_bcomm, init_rank, no_rank, agree);

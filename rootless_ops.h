@@ -2,7 +2,7 @@
  * rootless_ops.h
  *
  *  Created on: Jul 17, 2019
- *      Author: tonglin
+ *      Author: Tonglin Li
  */
 
 #include <mpi.h>
@@ -63,10 +63,10 @@ typedef int (*iar_cb_func_t)(const void *msg_buf, void *app_ctx);//const void *m
 typedef struct Proposal_buf{
     ID pid;
     Vote vote;//0 = vote NO, 1 = vote yes, -1 = proposal, -2 = decision.
-    unsigned int data_len;
+    size_t data_len;
     char* data;
 }PBuf;
-int pbuf_serialize(ID pid_in, Vote vote, unsigned int data_len_in, char* data_in, char* buf_out, unsigned int* buf_len_out);
+int pbuf_serialize(ID pid_in, Vote vote, size_t data_len_in, char* data_in, char* buf_out, size_t* buf_len_out);
 void pbuf_free(PBuf* pbuf);
 int pbuf_deserialize(char* buf_in, PBuf* pbuf_out);
 
@@ -80,18 +80,18 @@ bcomm_engine_t* progress_engine_new(bcomm* my_bcomm, void* approv_cb_func, void*
 typedef struct bcomm_generic_msg bcomm_GEN_msg_t;
 typedef struct Proposal_state proposal_state;
 
-struct user_msg{
+typedef struct user_msg{
     char buf[MSG_SIZE_MAX + sizeof(int)];
     int type;
     ID pid;
     Vote vote;//0 = vote NO, 1 = vote yes, -1 = proposal, -2 = decision.
-    unsigned int data_len;
+    size_t data_len;
     char* data;
-};
+} user_msg;
 
 struct bcomm_generic_msg{
     //char buf[MSG_SIZE_MAX + sizeof(int)];// Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
-    struct user_msg msg_usr;
+    user_msg msg_usr;
     char* data_buf; //= buf + sizeof(int), so data_buf size is MSG_SIZE_MAX
     int id_debug;
 
@@ -116,6 +116,7 @@ struct bcomm_generic_msg{
         //By default it's set to 0, and set to 1 for a new bc msg.
 };
 
+user_msg* user_msg_new(bcomm_GEN_msg_t* gen_msg_in);
 bcomm_GEN_msg_t* msg_new_generic(bcomm_engine_t* eng);
 bcomm_GEN_msg_t* msg_new_bc(bcomm_engine_t* eng, void* buf_in, int send_size);
 int msg_free(bcomm_GEN_msg_t* msg_in);
@@ -126,11 +127,11 @@ int bcast_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in, enum COM_TAGS tag);
 int engine_cleanup(bcomm_engine_t* eng);
 
 // Submit a proposal, add it to waiting list, then return.
-int iar_submit_proposal(bcomm_engine_t* eng, char* proposal, unsigned long prop_size, ID my_proposal_id);
+int iar_submit_proposal(bcomm_engine_t* eng, char* proposal, size_t prop_size, ID my_proposal_id);
 int check_proposal_state(bcomm_engine_t* eng, int pid);
 int get_vote_my_proposal(bcomm_engine_t* eng);
-int user_pickup_next(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out);
-int user_msg_done(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in);
+int user_pickup_next(bcomm_engine_t* eng, user_msg** msg_out);
+int user_msg_recycle(bcomm_engine_t* eng, user_msg* msg_in);
 
 int proposal_reset(proposal_state* ps);
 int get_my_rank();
