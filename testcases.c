@@ -23,26 +23,26 @@ int is_proposal_approved_cb(const void *proposal, void *_app_ctx){
 
     int my_rank = get_my_rank();
 
-    printf("%s:%u - rank = %03d, proposal = %p, _app_ctx = %p\n",
-            __func__, __LINE__, my_rank, proposal, _app_ctx);
+//    printf("%s:%u - rank = %03d, proposal = %p, _app_ctx = %p\n",
+//            __func__, __LINE__, my_rank, proposal, _app_ctx);
     ISP* my_isp = (ISP*)_app_ctx;
     //printf("          Callback function: received proposal = [%s], my proposal = [%s]\n", recved_prop, my_prop);
 
-    printf("%s:%u - rank = %03d, my_isp = %p, my_isp->my_proposal = %p\n",
-            __func__, __LINE__, my_rank, my_isp, my_isp->my_proposal);
+//    printf("%s:%u - rank = %03d, my_isp = %p, my_isp->my_proposal = %p\n",
+//            __func__, __LINE__, my_rank, my_isp, my_isp->my_proposal);
     if(!my_isp->my_proposal || strlen(my_isp->my_proposal) == 0)//I don't have a proposal, so I approve anything coming in.
         return 1;
 
     if(!proposal)
         return 1;
 
-    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
+//    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     if(strcmp(my_isp->my_proposal, proposal) == 0){//compatible
         printf("%s:%u return 1\n", __func__, __LINE__);
         return 1;
     }
 
-    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
+//    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     if(((char*)proposal)[0] < ((char*)my_isp->my_proposal)[0]) {
         printf("%s:%u return 0\n", __func__, __LINE__);
         return 0;

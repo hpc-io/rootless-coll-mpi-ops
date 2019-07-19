@@ -245,7 +245,7 @@ bcomm_GEN_msg_t* msg_new_generic(bcomm_engine_t* eng) {
 
     new_msg->msg_usr.data = new_msg->msg_usr.buf + sizeof(int);// == msg->data_buf.
     // Set msg origin
-    memcpy(new_msg->msg_usr.buf, &(eng->my_bcomm->my_rank), sizeof(int));
+
     *(int*)(new_msg->msg_usr.buf) = eng->my_bcomm->my_rank;
     return new_msg;
 }
@@ -551,14 +551,14 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
     new_prop_state->recv_proposal_from = recv_msg_buf_in->irecv_stat.MPI_SOURCE;
     new_prop_state->state = IN_PROGRESS;
     recv_msg_buf_in->prop_state = new_prop_state;
-    printf("%s:%u - rank = %03d: received a proposal from rank %d: %p\n",
-            __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg_buf_in->irecv_stat.MPI_SOURCE, recv_msg_buf_in);
+//    printf("%s:%u - rank = %03d: received a proposal from rank %d: %p\n",
+//            __func__, __LINE__, eng->my_bcomm->my_rank, recv_msg_buf_in->irecv_stat.MPI_SOURCE, recv_msg_buf_in);
     if(pbuf->pid == eng->my_own_proposal.pid){
         printf("%s:%u - rank = %03d: received a proposal with my own pid: something went wrong...\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         return -1;
     }else{
         new_prop_state->votes_needed = fwd_send_cnt(eng->my_bcomm, origin, recv_msg_buf_in->irecv_stat.MPI_SOURCE);//votes needed;
-        printf("%s:%u - rank = %03d: need %d votes. \n", __func__, __LINE__, eng->my_bcomm->my_rank, new_prop_state->votes_needed);
+        //printf("%s:%u - rank = %03d: need %d votes. \n", __func__, __LINE__, eng->my_bcomm->my_rank, new_prop_state->votes_needed);
     }
 
 //    printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
@@ -568,7 +568,7 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
     printf("%s:%u - rank = %03d, prop_judgement_cb() = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, judgment);
     switch (judgment) {
         case 0: {    //others' declined
-            printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
             //queue_append(&(eng->queue_iar_pending), recv_msg_buf_in);
             _vote_back(eng, new_prop_state, 0);
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
@@ -578,8 +578,8 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
                 //Add msg to queue_iar_pending in _bc_forward().
 
             int fwd_cnt = fwd_send_cnt(eng->my_bcomm, origin, recv_msg_buf_in->irecv_stat.MPI_SOURCE);
-            printf("%s:%u - rank = %03d: eng->queue_iar_pending.head = %p, queueing a proposal: %p, fwd_cnt = %d\n",
-                    __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_iar_pending.head, recv_msg_buf_in, fwd_cnt);
+//            printf("%s:%u - rank = %03d: eng->queue_iar_pending.head = %p, queueing a proposal: %p, fwd_cnt = %d\n",
+//                    __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_iar_pending.head, recv_msg_buf_in, fwd_cnt);
 
             if (_bc_forward(eng, recv_msg_buf_in) == 0) {//no need to fwd.
                 _vote_back(eng, new_prop_state, 1);
@@ -595,7 +595,7 @@ int _iar_proposal_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in)
 }
 
 int _vote_back(bcomm_engine_t* eng, proposal_state* ps, Vote vote){
-    printf("%s:%u - rank = %03d, vote back to rank %d, for pid = %d, vote = %d.\n", __func__, __LINE__,eng->my_bcomm->my_rank, ps->recv_proposal_from, ps->pid, vote);
+    //printf("%s:%u - rank = %03d, vote back to rank %d, for pid = %d, vote = %d.\n", __func__, __LINE__,eng->my_bcomm->my_rank, ps->recv_proposal_from, ps->pid, vote);
     size_t send_len = 0;
     char send_buf[MSG_SIZE_MAX+1] = "";
 
@@ -606,7 +606,6 @@ int _vote_back(bcomm_engine_t* eng, proposal_state* ps, Vote vote){
 //    MPI_Request req;
 //    MPI_Isend(send_buf, eng->my_bcomm->msg_size_max + 1, MPI_CHAR, ps->recv_proposal_from,
 //            IAR_VOTE, eng->my_bcomm->my_comm, &req);
-    printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     return send_len;
 }
 
@@ -635,15 +634,15 @@ int _iar_vote_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
                 vote_buf->vote, eng->my_own_proposal.votes_recved,
                 eng->my_own_proposal.votes_needed);
         if (eng->my_own_proposal.votes_recved == eng->my_own_proposal.votes_needed) { //all done, bcast decision.
-            printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
 
             if(eng->my_own_proposal.vote){
-                printf("%s:%u - rank = %03d, app_ctx = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->app_ctx);
+                //printf("%s:%u - rank = %03d, app_ctx = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->app_ctx);
 
                 eng->my_own_proposal.vote = (eng->prop_judgement_cb)(eng->my_proposal, eng->app_ctx);
-                printf("%s:%u - rank = %03d, prop_judgement_cb() = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->my_own_proposal.vote);
+                //printf("%s:%u - rank = %03d, prop_judgement_cb() = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, eng->my_own_proposal.vote);
             }
-            printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
+            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
             _iar_decision_bcast(eng, eng->my_own_proposal.pid, eng->my_own_proposal.vote);
             pbuf_free(vote_buf);
             return 0;
@@ -653,8 +652,8 @@ int _iar_vote_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
         }
 
     } else { //Votes for proposals in the state queue
-        printf("%s:%u - rank = %03d, received a vote from rank %03d for other's proposal, vote = %d.\n",
-                __func__, __LINE__, eng->my_bcomm->my_rank, msg_buf->irecv_stat.MPI_SOURCE, vote_buf->vote);
+//        printf("%s:%u - rank = %03d, received a vote from rank %03d for other's proposal, vote = %d.\n",
+//                __func__, __LINE__, eng->my_bcomm->my_rank, msg_buf->irecv_stat.MPI_SOURCE, vote_buf->vote);
         proposal_state ps_result;
         int ret = _vote_merge(eng, vote_buf->pid, vote_buf->vote, &ps_result);
         //printf("%s:%u - rank = %03d, merged vote = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, ps_result.vote);
@@ -667,8 +666,8 @@ int _iar_vote_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_buf) {
             return -1;
         } else { // Find proposal, merge completed.
             if (ret == 1) { //done collecting votes, vote back
-                printf("%s:%u - rank = %03d: done collecting votes, vote back = %d for pid = %d, vote_buf pid = %d\n",
-                        __func__, __LINE__, eng->my_bcomm->my_rank, ps_result.vote, ps_result.pid, vote_buf->pid);
+//                printf("%s:%u - rank = %03d: done collecting votes, vote back = %d for pid = %d, vote_buf pid = %d\n",
+//                        __func__, __LINE__, eng->my_bcomm->my_rank, ps_result.vote, ps_result.pid, vote_buf->pid);
                 _vote_back(eng, &ps_result, ps_result.vote);
                 pbuf_free(vote_buf);
             } else {
@@ -1332,15 +1331,13 @@ int pbuf_serialize(ID pid_in, Vote vote, size_t data_len_in, char* data_in,
     if(!buf_out)
         return -1;
 
-    //memcpy(buf_out, &pid_in, sizeof(ID));
     *((ID*)buf_out) = pid_in;
-    //memcpy(buf_out + sizeof(ID), &vote, sizeof(Vote));
     *((Vote*)(buf_out + sizeof(ID))) = vote;
-    //memcpy(buf_out + sizeof(ID) + sizeof(Vote), &data_len_in, sizeof(unsigned int));
     *((size_t*)(buf_out + sizeof(ID) + sizeof(Vote))) = data_len_in;
 
-    if(data_len_in != 0)
+    if(data_len_in != 0){
         memcpy(buf_out + sizeof(ID) + sizeof(Vote) + sizeof(size_t), data_in, data_len_in);
+    }
     if(buf_len_out) {
         *buf_len_out = sizeof(ID)  /* SN */
             + sizeof(Vote)          /* vote/decision */
@@ -1348,9 +1345,6 @@ int pbuf_serialize(ID pid_in, Vote vote, size_t data_len_in, char* data_in,
             + data_len_in;          /* data */
     }
 
-    int my_rank = get_my_rank();
-    printf("%s:%u - rank = %03d, pid = %d, vote = %d, data_len = %lu, data = [%s]\n", __func__, __LINE__, my_rank,
-            *((ID*)buf_out), *((Vote*)(buf_out + sizeof(ID))), *((size_t*)(buf_out + sizeof(ID) + sizeof(Vote))), (char*)(buf_out + sizeof(ID) + sizeof(Vote) + sizeof(size_t)));
     return 0;
 }
 
@@ -1371,7 +1365,6 @@ int pbuf_deserialize(char* buf_in, PBuf* pbuf_out) {
 
     pbuf_out->data = malloc(MSG_SIZE_MAX - sizeof(ID));
     memcpy(pbuf_out->data, buf_in + sizeof(ID) + sizeof(Vote) + sizeof(size_t), pbuf_out->data_len);
-    //pbuf_out->data = (char*) buf_in + sizeof(ID) + sizeof(Vote) + sizeof(unsigned int);
 
     return 0;
 }
