@@ -89,9 +89,9 @@ int test_gen_bcast(bcomm* my_bcomm, int buf_size, int root_rank, int cnt){
         //load data for bcast
         char buf[64] = "";
         for(int i = 0; i < cnt; i++) {
-            bcomm_GEN_msg_t* send_msg = msg_new_bc(eng, buf, strlen(buf));
             sprintf(buf, "msg_No.%d", i);
-            memcpy(send_msg->data_buf, buf, 64);
+            bcomm_GEN_msg_t* send_msg = msg_new_bc(eng, buf, strlen(buf));
+
             printf("Rank %d bcasting: msg = [%s], msg_usr.data = [%s]\n", my_rank, send_msg->data_buf, send_msg->msg_usr.data);
             bcast_gen(eng, send_msg, BCAST);
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
@@ -491,8 +491,8 @@ int main(int argc, char** argv) {
     int no_rank = atoi(argv[2]); //Rank that says 'NO'
     int agree = atoi(argv[3]);
 
-    //sleep(60);
-    //test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank, agree);
+    //sleep(30);
+//    test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank, agree);
 
     test_IAllReduce_multi_proposal(my_bcomm, init_rank, no_rank, agree);
 
