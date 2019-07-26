@@ -16,29 +16,19 @@ int aggregate_test_result(int test_passed, char* test_name);
 
 
 int is_proposal_approved_cb(const void *proposal, void *_app_ctx){
-
-    int my_rank = get_my_rank();
-
-//    printf("%s:%u - rank = %03d, proposal = %p, _app_ctx = %p\n",
-//            __func__, __LINE__, my_rank, proposal, _app_ctx);
     ISP* my_isp = (ISP*)_app_ctx;
-    //printf("          Callback function: received proposal = [%s], my proposal = [%s]\n", recved_prop, my_prop);
 
-//    printf("%s:%u - rank = %03d, my_isp = %p, my_isp->my_proposal = %p\n",
-//            __func__, __LINE__, my_rank, my_isp, my_isp->my_proposal);
     if(!my_isp->my_proposal || strlen(my_isp->my_proposal) == 0)//I don't have a proposal, so I approve anything coming in.
         return 1;
 
     if(!proposal)
         return 1;
 
-//    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     if(strcmp(my_isp->my_proposal, proposal) == 0){//compatible
         printf("%s:%u return 1\n", __func__, __LINE__);
         return 1;
     }
 
-//    printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     if(((char*)proposal)[0] < ((char*)my_isp->my_proposal)[0]) {
         printf("%s:%u return 0\n", __func__, __LINE__);
         return 0;
@@ -70,7 +60,6 @@ int test_gen_bcast(int buf_size, int root_rank, int cnt){
     int my_rank = get_my_rank();
     int world_size = get_world_size();
     int test_passed = 0;
-    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     assert(root_rank < world_size);
     if(buf_size > MSG_SIZE_MAX) {
         printf("Message size too big. Maximum allowed is %d\n", MSG_SIZE_MAX);
@@ -89,35 +78,23 @@ int test_gen_bcast(int buf_size, int root_rank, int cnt){
         for(int i = 0; i < cnt; i++) {
             sprintf(buf, "msg_No.%d", i);
             msg_t* send_msg = msg_new_bc(eng, buf, strlen(buf));
-
-            //printf("Rank %d bcasting: msg = [%s], msg_usr.data = [%s]\n", my_rank, send_msg->data_buf, send_msg->msg_usr.data);
             bcast_gen(eng, send_msg, BCAST);
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             make_progress_gen(eng, &recv_msg);
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             recv_msg = NULL;
         }
     } else {//recv
         do{
-            //sleep(1);
             recv_msg = NULL;
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             make_progress_gen(eng, &recv_msg);
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             user_msg* pickup_out = NULL;
             while(user_pickup_next(eng, &pickup_out)){
-                //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
                 recved_cnt++;
-//                printf("%s:%u - rank = %03d, received bcast msg:[%s], received %d already, expecting %d in total.\n", __func__, __LINE__,
-//                        my_rank, pickup_out->data, recved_cnt, cnt);
                 user_msg_recycle(eng, pickup_out);//free it here if(fwd_done)
             }
-            //sleep(1);
         } while(recved_cnt < cnt);
     }
-    //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
     unsigned long end = get_time_usec();
-    //MPI_Barrier(MPI_COMM_WORLD);
+
     time_send = end - start;
 
     if(my_rank != root_rank){
@@ -130,14 +107,32 @@ int test_gen_bcast(int buf_size, int root_rank, int cnt){
     return test_passed;
 }
 
+//Basic testcase for multiple mpi communicator
+int testcase_iar_single_multiComm(){
+    MPI_Comm comm1;
+    MPI_Comm comm2;
+    MPI_Comm_dup(MPI_COMM_WORLD, &comm1);
+    MPI_Comm_dup(MPI_COMM_WORLD, &comm2);
+    int rank, rank1, rank2;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_rank(comm1, &rank1);
+    MPI_Comm_rank(comm2, &rank2);
+
+    printf("my rank_world = %d, rank1 = %d, rank2 = %d\n", rank, rank1, rank2);
+    test_IAllReduce_single_proposal(comm1, 1, 2, 0);
+    test_IAllReduce_single_proposal(comm2, 1, 2, 1);
+
+    return 0;
+}
+
 //no_rank: the rank that votes "NO".
-int test_IAllReduce_single_proposal(int starter, int no_rank, int agree) {
+int test_IAllReduce_single_proposal(MPI_Comm comm, int starter, int no_rank, int agree) {
     ISP isp;
     isp.my_proposal = NULL;
     int my_rank = get_my_rank();
     int world_size = get_world_size();
     assert((starter < world_size) && (no_rank < world_size));
-    engine_t* eng = progress_engine_new(MPI_COMM_WORLD, MSG_SIZE_MAX, &is_proposal_approved_cb, &isp, &proposal_action_cb);
+    engine_t* eng = progress_engine_new(comm, MSG_SIZE_MAX, &is_proposal_approved_cb, &isp, &proposal_action_cb);
     char* my_proposal = "111";
     char* proposal_2 = "333";
 
@@ -165,7 +160,6 @@ int test_IAllReduce_single_proposal(int starter, int no_rank, int agree) {
     } else {//passive ranks
         usleep(200);
         if (my_rank  == no_rank) {// Passive opponent
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             if(agree){
                 isp.my_proposal = my_proposal;
             } else {
@@ -175,11 +169,8 @@ int test_IAllReduce_single_proposal(int starter, int no_rank, int agree) {
           isp.my_proposal = "";
         }
         int tag_recv = -1;
-        //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
         do {
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             make_progress_gen(eng, NULL);
-            //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
             user_msg* pickup_out = NULL;
             usleep(300);
             while(user_pickup_next(eng, &pickup_out)){
@@ -189,7 +180,6 @@ int test_IAllReduce_single_proposal(int starter, int no_rank, int agree) {
                 //pbuf_deserialize(pickup_out->data_buf, pbuf);
 
                 tag_recv = pickup_out->type;
-                //printf("%s:%u - rank = %03d: tag_recv = %d\n", __func__, __LINE__, my_rank, tag_recv);
                 switch (tag_recv) {//pickup_out->irecv_stat.MPI_TAG
                     case IAR_PROPOSAL: //2
                         printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out->pid, pickup_out->data);
@@ -244,7 +234,6 @@ int testcase_decision_receiver(engine_t* eng, int decision_needed){
             //pbuf_deserialize(pickup_out->data_buf, pbuf);
 
             tag_recv = pickup_out->type;
-            //printf("%s:%u - rank = %03d: tag_recv = %d\n", __func__, __LINE__, my_rank, tag_recv);
             switch (tag_recv) { //pickup_out->irecv_stat.MPI_TAG
                 case IAR_PROPOSAL: //2
                     printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out->pid,
@@ -276,7 +265,7 @@ int testcase_decision_receiver(engine_t* eng, int decision_needed){
     return cnt_yes + cnt_no;
 }
 
-int test_IAllReduce_multi_proposal(int active_1, int active_2_mod, int agree) {
+int test_IAllReduce_multi_proposal(MPI_Comm comm, int active_1, int active_2_mod, int agree) {
     char* my_proposal = "555";
     ISP isp;
     isp.my_proposal = NULL;
@@ -284,15 +273,13 @@ int test_IAllReduce_multi_proposal(int active_1, int active_2_mod, int agree) {
     int pass = 0;
 
     assert((active_1 < world_size) && (active_2_mod < world_size));
-    engine_t* eng = progress_engine_new(MPI_COMM_WORLD, MSG_SIZE_MAX, &is_proposal_approved_cb, &isp, &proposal_action_cb);
+    engine_t* eng = progress_engine_new(comm, MSG_SIZE_MAX, &is_proposal_approved_cb, &isp, &proposal_action_cb);
 
     int result = -1;
     int ret = -1;
     //Rank 0, first active, mod active rank
     int decision_needed = 1 + (world_size - 1) / active_2_mod + 1;
     int my_rank = get_my_rank();
-
-    //printf("Rank %d: send_channel_cnt = %d, send_list_len = %d\n", my_rank, my_bcomm->send_channel_cnt, my_bcomm->send_list_len);
 
     if (my_rank == active_1) {
         printf(" \n-------- First active rank %d--------\n\n", my_rank);
@@ -315,9 +302,6 @@ int test_IAllReduce_multi_proposal(int active_1, int active_2_mod, int agree) {
              make_progress_gen(eng, NULL);
              pass = (testcase_decision_receiver(eng, decision_needed - 1) == decision_needed - 1);
          }
-//        printf("\n        %s:%u - rank = %03d: active proposal completed, decision = %d \n",
-//                __func__, __LINE__, my_rank, result);
-
     } else if (my_rank % active_2_mod == 0) {
         printf(" \n-------- Mod active rank %d--------\n\n", my_rank);
 
@@ -355,8 +339,6 @@ int test_IAllReduce_multi_proposal(int active_1, int active_2_mod, int agree) {
     }
 
     engine_cleanup(eng);
-
-    //MPI_Barrier(MPI_COMM_WORLD);
 
     if(my_rank == active_1 || my_rank == active_2_mod) {
         if (result) {
@@ -411,10 +393,10 @@ int aggregate_test_result(int test_passed, char* test_name) {
     return ret;
 }
 
-int hacky_sack_progress_engine(int cnt){
+int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
     int my_rank = get_my_rank();
 
-    engine_t* eng = progress_engine_new(MPI_COMM_WORLD, MSG_SIZE_MAX, NULL, NULL, NULL);
+    engine_t* eng = progress_engine_new(comm, MSG_SIZE_MAX, NULL, NULL, NULL);
 
     unsigned long time_start;
     unsigned long time_end;
@@ -440,28 +422,23 @@ int hacky_sack_progress_engine(int cnt){
     bcast_sent_cnt = 0;
     user_msg* pickup_out = NULL;
 
-    while (bcast_sent_cnt < cnt) {
+    while (bcast_sent_cnt < msg_cnt) {
         make_progress_gen(eng, NULL);
+
         while(user_pickup_next(eng, &pickup_out)){
             recv_msg_cnt++;
             total_pickup++;
-            //printf("%s:%u - rank = %03d, pickup_out msg = [%s]\n", __func__, __LINE__, my_rank, pickup_out->data);
             int recv_rank = atoi((pickup_out->data));
             user_msg_recycle(eng, pickup_out);
-            //make_progress_gen(eng, NULL);
+
             if(recv_rank == my_rank){
-                //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
                 char buf[32] = "";
                 next_rank = get_next_rank(my_rank, world_size);
                 sprintf(buf, "%d", next_rank);
-                //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
                 msg_t* next_msg_send = msg_new_bc(eng, buf, sizeof(buf));
                 bcast_gen(eng, next_msg_send, BCAST);
                 bcast_sent_cnt++;
-                //printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
-                //make_progress_gen(eng, NULL);
             }
-            //make_progress_gen(eng, NULL);
         }
     }
 
@@ -508,15 +485,14 @@ int test_wrapper_bcast(int bc_cnt){
 int test_wrapper_hackysacking(int cnt_round, int cnt_msg){
     int failed = 0;
     int my_rank = get_my_rank();
+    MPI_Comm comm;
+    MPI_Comm_dup(MPI_COMM_WORLD, &comm);
     for (int i = 0; i < cnt_round; i++) {
-        int succ = hacky_sack_progress_engine(cnt_msg);
+        int succ = hacky_sack_progress_engine(comm, cnt_msg);
         if(succ != 1){
             failed++;
             break;
         }
-        //printf("Rank %d: Hackysacking round %d completed, %d needed.\n", my_rank, i + 1, cnt_round);
-        //MPI_Barrier(MPI_COMM_WORLD);
-        //sleep(1);
     }
     int pass = (failed == 0);
     return aggregate_test_result(pass, "Hackysack");
@@ -539,17 +515,19 @@ int main(int argc, char** argv) {
 //    test_gen_bcast(my_bcomm, MSG_SIZE_MAX, init_rank, op_cnt);
 
     // ======================== All-to-all bcast test: Hackysacking ========================
+    //testcase_iar_single_multiComm();
     test_wrapper_hackysacking(3, 100);
 //    test_wrapper_bcast(2);
 ////
-//    int init_rank = atoi(argv[1]);
-//    int no_rank = atoi(argv[2]); //Rank that says 'NO'
-//    int agree = atoi(argv[3]);
-
+    int init_rank = atoi(argv[1]);
+    int no_rank = atoi(argv[2]); //Rank that says 'NO'
+    int agree = atoi(argv[3]);
+    MPI_Comm comm;
+    MPI_Comm_dup(MPI_COMM_WORLD, &comm);
     //sleep(30);
 //    test_IAllReduce_single_proposal(my_bcomm, init_rank, no_rank, agree);
 
-//    test_IAllReduce_multi_proposal(my_bcomm, init_rank, no_rank, agree);
+    test_IAllReduce_multi_proposal(comm, init_rank, no_rank, agree);
 
     MPI_Finalize();
 
