@@ -70,14 +70,9 @@ int pbuf_serialize(ID pid_in, Vote vote, size_t data_len_in, char* data_in, char
 void pbuf_free(PBuf* pbuf);
 int pbuf_deserialize(char* buf_in, PBuf* pbuf_out);
 
-typedef struct BCastCommunicator bcomm;
-bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max);
+typedef struct progress_engine engine_t;
 
-typedef struct bcomm_progress_engine bcomm_engine_t;
-
-bcomm_engine_t* progress_engine_new(bcomm* my_bcomm, void* approv_cb_func, void* app_ctx, void* app_proposal_action);
-
-typedef struct bcomm_generic_msg bcomm_GEN_msg_t;
+typedef struct msg_generic msg_t;
 typedef struct Proposal_state proposal_state;
 
 typedef struct user_msg{
@@ -89,7 +84,7 @@ typedef struct user_msg{
     char* data;
 } user_msg;
 
-struct bcomm_generic_msg{
+struct msg_generic{
     //char buf[MSG_SIZE_MAX + sizeof(int)];// Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
     user_msg msg_usr;
     char* data_buf; //= buf + sizeof(int), so data_buf size is MSG_SIZE_MAX
@@ -104,7 +99,7 @@ struct bcomm_generic_msg{
 
     proposal_state* prop_state;
 
-    bcomm_GEN_msg_t *prev, *next; //for generic queue ops
+    msg_t *prev, *next; //for generic queue ops
 
     int send_cnt; //how many isend to monitor
     int ref_cnt;
@@ -116,23 +111,72 @@ struct bcomm_generic_msg{
         //By default it's set to 0, and set to 1 for a new bc msg.
 };
 
-user_msg* user_msg_new(bcomm_GEN_msg_t* gen_msg_in);
-bcomm_GEN_msg_t* msg_new_generic(bcomm_engine_t* eng);
-bcomm_GEN_msg_t* msg_new_bc(bcomm_engine_t* eng, void* buf_in, int send_size);
-int msg_free(bcomm_GEN_msg_t* msg_in);
+user_msg* user_msg_new(msg_t* gen_msg_in);
 
-// Entry point: turing gears for progress engine.
-int make_progress_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t** msg_out);
-int bcast_gen(bcomm_engine_t* eng, bcomm_GEN_msg_t* msg_in, enum COM_TAGS tag);
-int engine_cleanup(bcomm_engine_t* eng);
+/**
+ *  Make a new generic type message.
+ * @param eng: the progress engine used
+ * @return a message pointer
+ */
+msg_t* msg_new_generic(engine_t* eng);
+msg_t* msg_new_bc(engine_t* eng, void* buf_in, int send_size);
+int msg_free(msg_t* msg_in);
+
+int msg_test_isends(engine_t* eng, msg_t* msg_in);
+
+/**
+ * Make a new progerss engine.
+ * @param mpi_comm: a MPI communicator, such as MPI_COMM_WORLD
+ * @param msg_size_max: maximal message size allowed in progress engine to process and transfer. Set it to be a big number to be safe, such as 32768.
+ * @param approv_cb_func: user defined callback function, used in IAllReduce. Set it to NULL if not using IAllReduce.
+ * @param app_ctx: user defined application context, used along with above callback function. Set it to NULL if not using IAllReduce.
+ * @param app_proposal_action: user defined callback function, used in IAllReduce. Set it to NULL if not using IAllReduce.
+ */
+engine_t* progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max, void* approv_cb_func, void* app_ctx, void* app_proposal_action);
+
+/**
+ * The core of the progress engine. It's called to turn the "gears" of the progress engine so to push it to next state.
+ * @param eng: the progress engine used
+ * @param msg_out: output message, only used to sample a message, for debugging purpose.
+ */
+int make_progress_gen(engine_t* eng, msg_t** msg_out);
+
+/**
+ * Rootless broadcast, can be initiated at any rank without predefine a "root" like the one in MPI_Bcast().
+ * @param eng: the progress engine used
+ * @param msg_in: the message to bcast. By default, the user should only use msg_new_bc() to make a new message.
+ * @param tag: used to specify the message type. By default, the user should only use BCAST.
+ * @see msg_new_bc()
+ * @see msg_new_generic()
+ */
+int bcast_gen(engine_t* eng, msg_t* msg_in, enum COM_TAGS tag);
+
+/**
+ * All received messages are picked up by this function, give one output at a time. User should keep calling it until return 0 so to get all messages in the mailbox.
+ * @param eng: the progress engine used
+ * @param msg_out: output parameter, gives the next available message in the mailbox.
+ * @return 1 if there are still messages left, 0 if no more messages available.
+ */
+int user_pickup_next(engine_t* eng, user_msg** msg_out);
+/**
+ * A utility function to recycle the message and free resource.
+ * User should always recycle a message after using it. Save the planet! (and a memory leakage.)
+ */
+int user_msg_recycle(engine_t* eng, user_msg* msg_in);
+
+/**
+ * Tear down an engine. It will free all resource used in eng.
+ */
+int engine_cleanup(engine_t* eng);
 
 // Submit a proposal, add it to waiting list, then return.
-int iar_submit_proposal(bcomm_engine_t* eng, char* proposal, size_t prop_size, ID my_proposal_id);
-int check_proposal_state(bcomm_engine_t* eng, int pid);
-int get_vote_my_proposal(bcomm_engine_t* eng);
-int user_pickup_next(bcomm_engine_t* eng, user_msg** msg_out);
-int user_msg_recycle(bcomm_engine_t* eng, user_msg* msg_in);
+int iar_submit_proposal(engine_t* eng, char* proposal, size_t prop_size, ID my_proposal_id);
+int check_proposal_state(engine_t* eng, int pid);
+int get_vote_my_proposal(engine_t* eng);
+
+
 
 int proposal_reset(proposal_state* ps);
 int get_my_rank();
+int get_world_size();
 #endif /* ROOTLESS_OPS_H_ */

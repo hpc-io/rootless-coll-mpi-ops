@@ -279,16 +279,12 @@ int msg_wait(engine_t* eng, msg_t* msg_in) {
 }
 
 int msg_free(msg_t* msg_in) {
-    int my_rank = 0;
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-    //printf("Rank %d: msg_free: msg_in = %p\n", my_rank, msg_in);
-    //printf("Rank %d: msg_free: bc_isend_reqs = %p\n", my_rank, msg_in->bc_isend_reqs);
     if(msg_in->bc_isend_reqs)
         free(msg_in->bc_isend_reqs);
-    //printf("Rank %d: msg_free: bc_isend_stats = %p\n", my_rank, msg_in->bc_isend_stats);
+
     if(msg_in->bc_isend_stats)
         free(msg_in->bc_isend_stats);
+
     free(msg_in);
     return 0;
 }
@@ -1412,8 +1408,8 @@ bcomm *bcomm_init(MPI_Comm comm, size_t msg_size_max) {
     my_bcomm = malloc(sizeof(bcomm));
 
     /* Copy communicator and gather stats about it */
-    //MPI_Comm_dup(comm, &my_bcomm->my_comm);
-    my_bcomm->my_comm = comm;
+    MPI_Comm_dup(comm, &my_bcomm->my_comm);
+    //my_bcomm->my_comm = comm;
     MPI_Comm_size(my_bcomm->my_comm, &my_bcomm->world_size);
     if (my_bcomm->world_size < 2) {
         printf("Too few ranks, program ended. world_size = %d\n", my_bcomm->world_size);
