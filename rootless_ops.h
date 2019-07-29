@@ -169,8 +169,8 @@ engine_t* progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max, void* appr
  * @param eng: the progress engine used
  * @param msg_out: output message, only used to sample a message, for debugging purpose.
  */
-int make_progress_gen(engine_t* eng, msg_t** msg_out);
-
+int make_progress_all();
+int get_engine_id(engine_t* eng);
 /**
  * Rootless broadcast, can be initiated at any rank without predefine a "root" like the one in MPI_Bcast().
  * @param eng: the progress engine used
@@ -183,9 +183,12 @@ int bcast_gen(engine_t* eng, msg_t* msg_in, enum COM_TAGS tag);
 
 /**
  * All received messages are picked up by this function, give one output at a time. User should keep calling it until return 0 so to get all messages in the mailbox.
+ * Assuming the msg will be copied and stay safe, and will be unlinked from pickup_queue.
+ * The user should free msg_out when it's done by calling user_msg_recycle().
  * @param eng: the progress engine used
  * @param msg_out: output parameter, gives the next available message in the mailbox.
  * @return 1 if there are still messages left, 0 if no more messages available.
+ * @NOTE: if this function is called in a thread different from the progress_engine thread, there will be a thread safe issue.
  */
 int user_pickup_next(engine_t* eng, user_msg** msg_out);
 /**
@@ -197,7 +200,7 @@ int user_msg_recycle(engine_t* eng, user_msg* msg_in);
 /**
  * Tear down an engine. It will free all resource used in eng.
  */
-int engine_cleanup(engine_t* eng);
+int progress_engine_cleanup(engine_t* eng);
 
 /* Submit a proposal, add it to waiting list, then return.
  * @return -1 if voting/decision making is not completed yet; 0 if proposal has been voted and declined, 1 if it's approved.

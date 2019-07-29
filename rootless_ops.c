@@ -10,6 +10,23 @@
 #define PROPOSAL_POOL_SIZE 16 //maximal concurrent proposal supported
 #define ISEND_CONCURRENT_MAX 128 //maximal number of concurrent and unfinished isend, used to set MPI_Request and MPI_State arrays for MPI_Waitall().
 
+typedef struct EngineManager {
+    engine_t* head;
+    engine_t* tail;
+    int engine_cnt;//current active engines
+    int _eng_ever_created;//engines that are ever created, used as a sn
+} EngineManager;
+
+EngineManager* Active_Engines;
+
+EngineManager* engine_manager_new();
+
+EngineManager* engine_manager_new(){
+    EngineManager* mngr_new = calloc(1, sizeof(EngineManager));
+    return mngr_new;
+}
+
+
 enum MSG_TAGS {//Used as a msg tag, it's a field of the msg. Class 2
     IAR_Vote // to replace IAR_VOTE in mpi_tag
 };
@@ -164,6 +181,7 @@ struct bcomm_IAR_state_t {
 
 struct progress_engine {
     bcomm *my_bcomm;
+    int engine_id;
     //generic queues for bc
     queue queue_recv;
     queue queue_wait;//waiting for isend completion.
@@ -210,9 +228,13 @@ struct progress_engine {
 
     //debug variables
     int fwd_queued;
+    engine_t* prev;
+    engine_t* next;
 };
 
 int msg_wait(engine_t* eng, msg_t* msg_in);
+
+int make_progress_gen(engine_t* eng, msg_t** recv_msg_out);
 
 int _test_ircecv_completed(engine_t* eng, msg_t* msg_buf);
 
@@ -362,6 +384,66 @@ int queue_remove(queue* q, msg_t* msg){
 }
 // Start progress engine, post irecv for all recv queues.
 
+int engine_append(EngineManager* q, engine_t* eng){
+    assert(q);
+    assert(eng);
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    if(q->head == q->tail){
+        if(!q->head){ // add as the 1st msg
+            eng->prev = NULL;
+            eng->next = NULL;
+            q->head = eng;
+            q->tail = eng;
+        } else {//add as 2nd msg
+            eng->prev = q->tail;
+            eng->next = NULL;
+            q->head->next = eng;
+            q->tail = eng;
+        }
+    } else {
+        eng->prev = q->tail;
+        eng->next = NULL;
+        q->tail->next = eng;
+        q->tail = eng;
+    }
+    q->engine_cnt++;
+    return 0;
+}
+
+//assume msg must be in the queue.
+int engine_remove(EngineManager* q, engine_t* eng){
+    assert(q);
+    assert(eng);
+    int ret = -1;
+    if(q->head == q->tail){//0 or 1 msg
+        if(!q->head){
+            return -1;
+        } else {//the only msg in the queue
+            q->head = NULL;
+            q->tail = NULL;
+            ret = 1;
+        }
+    } else {//more than 1 nodes in queue
+        if(eng == q->head){//remove head msg
+            q->head = q->head->next;
+            q->head->prev = NULL;
+        } else if (eng == q->tail){// non-head msg
+            q->tail = q->tail->prev;
+            q->tail->next = NULL;
+        } else{ // in the middle of queue
+            eng->prev->next = eng->next;
+            eng->next->prev = eng->prev;
+        }
+        ret = 1;
+    }
+
+    eng->prev = NULL;
+    eng->next = NULL;
+
+    q->engine_cnt--;
+    return ret;
+}
 engine_t* progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max, void* approv_cb_func, void* app_ctx, void* app_proposal_action){
     engine_t* eng = calloc(1, sizeof(engine_t));
 
@@ -406,13 +488,40 @@ engine_t* progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max, void* appr
 
     _post_irecv_gen(eng, msg_irecv_init, ANY_TAG);
     queue_append(&(eng->queue_recv), msg_irecv_init);
+    eng->next = NULL;
+
+    if(!Active_Engines){
+        Active_Engines = engine_manager_new();
+    }
+
+    engine_append(Active_Engines, eng);
+    Active_Engines->_eng_ever_created++;
+    eng->engine_id = Active_Engines->_eng_ever_created;
+    printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
     return eng;
 }
 
+int get_engine_id(engine_t* eng){
+    return eng->engine_id;
+}
 void progress_engine_free(engine_t* eng){
     free(eng);
 }
 //Turn the gear. Output a handle(recv_msgs_out ) to the received msg, for sampling purpose only. User should use pickup_next() to get msg.
+
+int make_progress_all() {
+    assert(Active_Engines);
+    engine_t* e = Active_Engines->head;
+    if(!e)
+        return -1;
+
+    while(e){
+        make_progress_gen(e, NULL);
+        e = e->next;
+    }
+    return 0;
+}
+
 int make_progress_gen(engine_t* eng, msg_t** recv_msg_out) {
 
     //========================== My active proposal state update==========================
@@ -724,7 +833,7 @@ int _iar_decision_handler(engine_t* eng, msg_t* msg_buf_in) {
 }
 
 int proposal_succeeded(engine_t* eng){
-    make_progress_gen(eng, NULL);
+    make_progress_all();
 
     return (eng->my_own_proposal.votes_needed == eng->my_own_proposal.votes_recved
             && eng->my_own_proposal.vote != 0);
@@ -732,7 +841,7 @@ int proposal_succeeded(engine_t* eng){
 }
 
 int check_proposal_state(engine_t* eng, int pid){
-    make_progress_gen(eng, NULL);
+    make_progress_all();
     return eng->my_own_proposal.state;
 }
 
@@ -762,7 +871,7 @@ int iar_submit_proposal(engine_t* eng, char* proposal, unsigned long prop_size, 
 
     bcast_gen(eng, proposal_msg, IAR_PROPOSAL);
 
-    make_progress_gen(eng, NULL);
+    make_progress_all();
 
     if(eng->my_own_proposal.state == COMPLETED)
         return eng->my_own_proposal.vote;//result
@@ -1464,10 +1573,11 @@ int bcast_gen(engine_t* eng, msg_t* msg_in, enum COM_TAGS tag) {
     /* Update # of outstanding messages being sent for bcomm */
     my_bcomm->bcast_send_cnt = my_bcomm->send_list_len;
     my_bcomm->my_bcast_cnt++;
+    make_progress_all();
     return 0;
 }
 
-int engine_cleanup(engine_t* eng){
+int progress_engine_cleanup(engine_t* eng){
     int total_bcast = 0;
     MPI_Request req;
     MPI_Status stat_out1;
@@ -1479,13 +1589,13 @@ int engine_cleanup(engine_t* eng){
     do {
         MPI_Test(&req, &done, &stat_out1);// test for MPI_Iallreduce.
         if (!done) {
-            make_progress_gen(eng, &recv_msg);
+            make_progress_all();
         }
     } while (!done);
 
     // Core cleanup section
     while (eng->recved_bcast_cnt + eng->sent_bcast_cnt < total_bcast) {
-        make_progress_gen(eng, &recv_msg);
+        make_progress_all();
     }
     recv_msg = NULL;
     user_msg* pickup_out = NULL;
@@ -1502,6 +1612,10 @@ int engine_cleanup(engine_t* eng){
         tmp = t;
     }
     bcomm_free(eng->my_bcomm);
+
+    printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
+    engine_remove(Active_Engines, eng);
+    printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
     progress_engine_free(eng);
     return 0;
 }
