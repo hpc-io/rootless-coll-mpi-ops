@@ -15,7 +15,7 @@
 #include <time.h>
 
 #define MAIL_BAG_SIZE 4
-#define MSG_SIZE_MAX 64
+#define RLO_MSG_SIZE_MAX 64
 
 typedef struct Mail_entry {
     char* message;
@@ -35,7 +35,7 @@ int rma_mailbag_get(void *buf_recv, int mail_count, int mail_size,
     }
 
     MPI_Get(buf_recv, 2 * get_size, MPI_CHAR, target_rank, 0,
-            2 * MAIL_BAG_SIZE * MSG_SIZE_MAX, MPI_CHAR, target_win);
+            2 * MAIL_BAG_SIZE * RLO_MSG_SIZE_MAX, MPI_CHAR, target_win);
 
     if (default_lock) {
         MPI_Win_unlock(target_rank, target_win);
