@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.15"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>RootlessOps: /Users/tonglin/nersc_dev_sync/rootless/testcases.c File Reference</title>
+<title>RLO: /Users/tonglin/nersc_dev_sync/rootless/testcases.c File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -21,7 +21,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">RootlessOps
+   <div id="projectname">RLO
    </div>
   </td>
  </tr>
@@ -91,26 +91,36 @@ Functions</h2></td></tr>
 <tr class="separator:ab9b20a579545ec8b0f9ddbf60a4a2757"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac34e296abadb615c2ccc4f8d025ed4d8"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#ac34e296abadb615c2ccc4f8d025ed4d8">proposal_action_cb</a> (const void *buf, void *app_data)</td></tr>
 <tr class="separator:ac34e296abadb615c2ccc4f8d025ed4d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a73ecaa2bf95898212b5cb87ba59044f0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a73ecaa2bf95898212b5cb87ba59044f0">aggregate_test_result</a> (int test_passed, char *test_name)</td></tr>
-<tr class="separator:a73ecaa2bf95898212b5cb87ba59044f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8b64413e448b2167ab5abaf5c2ec9a79"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a8b64413e448b2167ab5abaf5c2ec9a79">aggregate_test_result</a> (MPI_Comm comm, int test_passed, char *test_name)</td></tr>
+<tr class="separator:a8b64413e448b2167ab5abaf5c2ec9a79"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a928317cf70b9ebc18c77dce7f4a8b117"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a928317cf70b9ebc18c77dce7f4a8b117">test_IAllReduce_single_proposal</a> (MPI_Comm comm, int starter, int no_rank, int agree)</td></tr>
+<tr class="separator:a928317cf70b9ebc18c77dce7f4a8b117"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad405244bb07275ef15a026425f861b1d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#ad405244bb07275ef15a026425f861b1d">test_concurrent_iar_multi_proposal</a> (MPI_Comm comm, int active_1, int active_2_mod, int agree)</td></tr>
+<tr class="separator:ad405244bb07275ef15a026425f861b1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8a6b613f624ba34ccf85bd1128685067"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a8a6b613f624ba34ccf85bd1128685067">test_callback</a> ()</td></tr>
 <tr class="separator:a8a6b613f624ba34ccf85bd1128685067"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a281a9513d1d016f91f2fc64fe9c9b087"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a281a9513d1d016f91f2fc64fe9c9b087">test_gen_bcast</a> (int buf_size, int root_rank, int cnt)</td></tr>
 <tr class="separator:a281a9513d1d016f91f2fc64fe9c9b087"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae7eb8ca634f60afbd80423b182b5ba26"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#ae7eb8ca634f60afbd80423b182b5ba26">test_IAllReduce_single_proposal</a> (int starter, int no_rank, int agree)</td></tr>
-<tr class="separator:ae7eb8ca634f60afbd80423b182b5ba26"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3ed68304dec4de202f55f4bd0a43f8cd"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a3ed68304dec4de202f55f4bd0a43f8cd">testcase_decision_receiver</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, int decision_needed)</td></tr>
-<tr class="separator:a3ed68304dec4de202f55f4bd0a43f8cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a35bd112fc528de0792c690d87850ae15"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a35bd112fc528de0792c690d87850ae15">test_IAllReduce_multi_proposal</a> (int active_1, int active_2_mod, int agree)</td></tr>
-<tr class="separator:a35bd112fc528de0792c690d87850ae15"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a733389317ddd06c8c53aa166b87df410"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a733389317ddd06c8c53aa166b87df410">test_concurrent_iar_single_proposal</a> (MPI_Comm comm, int starter, int no_rank, int agree)</td></tr>
+<tr class="separator:a733389317ddd06c8c53aa166b87df410"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a999b8d60752fa6a5f46b953d2cdcd3f8"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a999b8d60752fa6a5f46b953d2cdcd3f8">testcase_iar_single_multiComm</a> ()</td></tr>
+<tr class="separator:a999b8d60752fa6a5f46b953d2cdcd3f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3c00efacab2cd6e6aa42524cbe82b814"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a3c00efacab2cd6e6aa42524cbe82b814">testcase_iar_concurrent_single_proposal</a> ()</td></tr>
+<tr class="separator:a3c00efacab2cd6e6aa42524cbe82b814"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1eeccb6081c83b7835d501f93ef8b501"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a1eeccb6081c83b7835d501f93ef8b501">testcase_iar_concurrent_multiple_proposal</a> ()</td></tr>
+<tr class="separator:a1eeccb6081c83b7835d501f93ef8b501"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade60c1529ba1c24cf40f96db400c4929"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#ade60c1529ba1c24cf40f96db400c4929">util_testcase_decision_receiver</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, int decision_needed)</td></tr>
+<tr class="separator:ade60c1529ba1c24cf40f96db400c4929"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7221a2f7ac8343b6a78b1fe6010aef08"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a7221a2f7ac8343b6a78b1fe6010aef08">test_iar_multi_proposal</a> (MPI_Comm comm, int active_1, int active_2_mod, int agree)</td></tr>
+<tr class="separator:a7221a2f7ac8343b6a78b1fe6010aef08"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa48ae9d3fc87942f5faec2a033b21ca4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#aa48ae9d3fc87942f5faec2a033b21ca4">get_prev_rank</a> (int my_rank, int world_size)</td></tr>
 <tr class="separator:aa48ae9d3fc87942f5faec2a033b21ca4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afc4196edc2d6c69afb317ab50efc1628"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#afc4196edc2d6c69afb317ab50efc1628">get_next_rank</a> (int my_rank, int world_size)</td></tr>
 <tr class="separator:afc4196edc2d6c69afb317ab50efc1628"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa0c71945847285d5c727f69c51acddab"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#aa0c71945847285d5c727f69c51acddab">get_random_rank</a> (int my_rank, int world_size)</td></tr>
 <tr class="separator:aa0c71945847285d5c727f69c51acddab"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a69ed73260eed55cfe455fc19c7f79fa6"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a69ed73260eed55cfe455fc19c7f79fa6">hacky_sack_progress_engine</a> (int cnt)</td></tr>
-<tr class="separator:a69ed73260eed55cfe455fc19c7f79fa6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0ff2dd39d73dcf9d029359655ca9a7aa"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a0ff2dd39d73dcf9d029359655ca9a7aa">hacky_sack_progress_engine</a> (MPI_Comm comm, int msg_cnt)</td></tr>
+<tr class="separator:a0ff2dd39d73dcf9d029359655ca9a7aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a92c01439b172ca67e3ad04e0565af4bb"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#a92c01439b172ca67e3ad04e0565af4bb">test_wrapper_bcast</a> (int bc_cnt)</td></tr>
 <tr class="separator:a92c01439b172ca67e3ad04e0565af4bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acddb576def3ed9576e0cca2786dab0d5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="testcases_8c.html#acddb576def3ed9576e0cca2786dab0d5">test_wrapper_hackysacking</a> (int cnt_round, int cnt_msg)</td></tr>
@@ -134,8 +144,8 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a73ecaa2bf95898212b5cb87ba59044f0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a73ecaa2bf95898212b5cb87ba59044f0">&#9670;&nbsp;</a></span>aggregate_test_result()</h2>
+<a id="a8b64413e448b2167ab5abaf5c2ec9a79"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b64413e448b2167ab5abaf5c2ec9a79">&#9670;&nbsp;</a></span>aggregate_test_result()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -143,6 +153,12 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">int aggregate_test_result </td>
           <td>(</td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>test_passed</em>, </td>
         </tr>
@@ -246,8 +262,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a69ed73260eed55cfe455fc19c7f79fa6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a69ed73260eed55cfe455fc19c7f79fa6">&#9670;&nbsp;</a></span>hacky_sack_progress_engine()</h2>
+<a id="a0ff2dd39d73dcf9d029359655ca9a7aa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0ff2dd39d73dcf9d029359655ca9a7aa">&#9670;&nbsp;</a></span>hacky_sack_progress_engine()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -255,9 +271,19 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">int hacky_sack_progress_engine </td>
           <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>cnt</em></td><td>)</td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>msg_cnt</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -365,6 +391,86 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ad405244bb07275ef15a026425f861b1d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad405244bb07275ef15a026425f861b1d">&#9670;&nbsp;</a></span>test_concurrent_iar_multi_proposal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int test_concurrent_iar_multi_proposal </td>
+          <td>(</td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>active_1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>active_2_mod</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>agree</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a733389317ddd06c8c53aa166b87df410"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a733389317ddd06c8c53aa166b87df410">&#9670;&nbsp;</a></span>test_concurrent_iar_single_proposal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int test_concurrent_iar_single_proposal </td>
+          <td>(</td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>starter</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>no_rank</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>agree</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a281a9513d1d016f91f2fc64fe9c9b087"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a281a9513d1d016f91f2fc64fe9c9b087">&#9670;&nbsp;</a></span>test_gen_bcast()</h2>
 
@@ -399,23 +505,29 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a35bd112fc528de0792c690d87850ae15"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a35bd112fc528de0792c690d87850ae15">&#9670;&nbsp;</a></span>test_IAllReduce_multi_proposal()</h2>
+<a id="a928317cf70b9ebc18c77dce7f4a8b117"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a928317cf70b9ebc18c77dce7f4a8b117">&#9670;&nbsp;</a></span>test_IAllReduce_single_proposal()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int test_IAllReduce_multi_proposal </td>
+          <td class="memname">int test_IAllReduce_single_proposal </td>
           <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>active_1</em>, </td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>active_2_mod</em>, </td>
+          <td class="paramname"><em>starter</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>no_rank</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -433,23 +545,29 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ae7eb8ca634f60afbd80423b182b5ba26"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae7eb8ca634f60afbd80423b182b5ba26">&#9670;&nbsp;</a></span>test_IAllReduce_single_proposal()</h2>
+<a id="a7221a2f7ac8343b6a78b1fe6010aef08"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7221a2f7ac8343b6a78b1fe6010aef08">&#9670;&nbsp;</a></span>test_iar_multi_proposal()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int test_IAllReduce_single_proposal </td>
+          <td class="memname">int test_iar_multi_proposal </td>
           <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>starter</em>, </td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>no_rank</em>, </td>
+          <td class="paramname"><em>active_1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>active_2_mod</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -513,16 +631,67 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a3ed68304dec4de202f55f4bd0a43f8cd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3ed68304dec4de202f55f4bd0a43f8cd">&#9670;&nbsp;</a></span>testcase_decision_receiver()</h2>
+<a id="a1eeccb6081c83b7835d501f93ef8b501"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1eeccb6081c83b7835d501f93ef8b501">&#9670;&nbsp;</a></span>testcase_iar_concurrent_multiple_proposal()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int testcase_decision_receiver </td>
+          <td class="memname">int testcase_iar_concurrent_multiple_proposal </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3c00efacab2cd6e6aa42524cbe82b814"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3c00efacab2cd6e6aa42524cbe82b814">&#9670;&nbsp;</a></span>testcase_iar_concurrent_single_proposal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int testcase_iar_concurrent_single_proposal </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a999b8d60752fa6a5f46b953d2cdcd3f8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a999b8d60752fa6a5f46b953d2cdcd3f8">&#9670;&nbsp;</a></span>testcase_iar_single_multiComm()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int testcase_iar_single_multiComm </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ade60c1529ba1c24cf40f96db400c4929"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ade60c1529ba1c24cf40f96db400c4929">&#9670;&nbsp;</a></span>util_testcase_decision_receiver()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int util_testcase_decision_receiver </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>

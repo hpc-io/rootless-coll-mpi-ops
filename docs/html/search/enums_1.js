@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['msg_5ftags',['MSG_TAGS',['../rootless__ops_8c.html#a025c8e51aaae4aa0239bd79bd286da1d',1,'rootless_ops.c']]]
+  ['req_5fstatus',['REQ_STATUS',['../rootless__ops_8h.html#a61940a61851e50228e5cb763214ed8a5',1,'rootless_ops.h']]],
+  ['rlo_5fcomm_5ftags',['RLO_COMM_TAGS',['../rootless__ops_8h.html#a4d1e332f04588d889cd6d8b36c61d7dd',1,'rootless_ops.h']]]
 ];

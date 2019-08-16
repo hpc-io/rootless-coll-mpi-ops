@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['any_5ftag',['ANY_TAG',['../rootless__ops_8h.html#a79cf93cdd02e55b7834032e5c1999aeda3115dd6ac5b81a8526ed4110e85564c0',1,'rootless_ops.h']]]
+  ['iar_5fvote',['IAR_Vote',['../rootless__ops_8c.html#a025c8e51aaae4aa0239bd79bd286da1da1db8ffb737becdb3ca70d9d06edac935',1,'rootless_ops.c']]]
 ];

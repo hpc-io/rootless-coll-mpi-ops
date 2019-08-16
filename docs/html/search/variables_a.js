@@ -1,14 +1,17 @@
 var searchData=
 [
-  ['pickup_5fdone',['pickup_done',['../structmsg__generic.html#ac5a2eb815ec62f712899b4c9ffba09de',1,'msg_generic']]],
-  ['pid',['pid',['../struct_proposal__state.html#a3e4c381e9db094b6f9950768fe0a91c8',1,'Proposal_state::pid()'],['../struct_proposal__buf.html#a3e4c381e9db094b6f9950768fe0a91c8',1,'Proposal_buf::pid()'],['../structuser__msg.html#a3e4c381e9db094b6f9950768fe0a91c8',1,'user_msg::pid()']]],
-  ['post_5firecv_5ftype',['post_irecv_type',['../structmsg__generic.html#a66c31b9ada965bf3287507515c717432',1,'msg_generic']]],
-  ['prev',['prev',['../structisend__state.html#aaf54edc5dd78f9a0029f5ea8ef6e71c5',1,'isend_state::prev()'],['../structbcomm___i_a_r__state__t.html#ab191ca99c8b79737584e32991dc86a30',1,'bcomm_IAR_state_t::prev()'],['../structmsg__generic.html#a87d1649c190cad4e9412056bb97df1ff',1,'msg_generic::prev()']]],
-  ['prop_5fjudgement_5fcb',['prop_judgement_cb',['../structprogress__engine.html#a978ee8f73dd53e0bbf576e330f7d8863',1,'progress_engine']]],
-  ['prop_5fstate',['prop_state',['../structbcomm___i_a_r__state__t.html#acff6b6e00abca8477ace85a0cce76ac4',1,'bcomm_IAR_state_t::prop_state()'],['../structmsg__generic.html#a2199502b9c85fd69cbc3670e83df563a',1,'msg_generic::prop_state()']]],
-  ['prop_5fstate_5fq_5fhead',['prop_state_q_head',['../structprogress__engine.html#a35446832ec524a5842eed0939fc30753',1,'progress_engine']]],
-  ['prop_5fstate_5fq_5ftail',['prop_state_q_tail',['../structprogress__engine.html#a2b7f7f385b6db78f0d7d2e47ccc03ab6',1,'progress_engine']]],
-  ['proposal_5faction',['proposal_action',['../structprogress__engine.html#a50b2971aa5f5e57c83f26637eb72a510',1,'progress_engine']]],
-  ['proposal_5fmsg',['proposal_msg',['../struct_proposal__state.html#a11ea8a6dcc46d5837dcfd6b14e7bf572',1,'Proposal_state']]],
-  ['proposal_5fstate_5fpool',['proposal_state_pool',['../structprogress__engine.html#a6f9251fb3f3ef1b08458c7be11056932',1,'progress_engine']]]
+  ['mail_5fcnt',['mail_cnt',['../struct_mail__bag.html#ab96475f69ff5a0f57e71d15620223af1',1,'Mail_bag']]],
+  ['message',['message',['../struct_mail__entry.html#a0b2e8c7f76df48129f994ecc46d5c66c',1,'Mail_entry']]],
+  ['msg_5fcnt',['msg_cnt',['../structqueue.html#a1fd8bd7eebad49537dc900df02be686d',1,'queue']]],
+  ['msg_5fsize_5fmax',['msg_size_max',['../struct_b_cast_communicator.html#acf669588e995bf0eecaf8abbc09933ac',1,'BCastCommunicator']]],
+  ['msg_5fusr',['msg_usr',['../struct_r_l_o__msg__generic.html#a5970e358ece16bf1cffb37e5d01673f3',1,'RLO_msg_generic']]],
+  ['my_5fbcast_5fcnt',['my_bcast_cnt',['../struct_b_cast_communicator.html#ae45f7586d777881b65b96ffe5d325755',1,'BCastCommunicator']]],
+  ['my_5fbcomm',['my_bcomm',['../structprogress__engine.html#aa1537f8b4450edf853d81e9962a0ddee',1,'progress_engine']]],
+  ['my_5fcomm',['my_comm',['../struct_b_cast_communicator.html#ad89b43a243281faf19cb8247edda5979',1,'BCastCommunicator']]],
+  ['my_5ffunc',['my_func',['../struct_d_s___t_m_p.html#a0a6fcca5a865f93ce57ab484ebb42fcd',1,'DS_TMP']]],
+  ['my_5flevel',['my_level',['../struct_b_cast_communicator.html#a251d09fa33436cce9b47d83cd4d7df6b',1,'BCastCommunicator']]],
+  ['my_5flog',['MY_LOG',['../rootless__ops_8c.html#a583e1a2be175748fb8a4b8a0673caf16',1,'rootless_ops.c']]],
+  ['my_5fown_5fproposal',['my_own_proposal',['../structprogress__engine.html#a0faeee31e88ad5e4629eeddaddb5e091',1,'progress_engine']]],
+  ['my_5fproposal',['my_proposal',['../structprogress__engine.html#aa8320d525f4f726dbfd99f6b59a9c141',1,'progress_engine::my_proposal()'],['../struct_i_a_r___single___prop___c_t_x.html#a406c100adcb4ae7dcc22795a1c382546',1,'IAR_Single_Prop_CTX::my_proposal()']]],
+  ['my_5frank',['my_rank',['../struct_b_cast_communicator.html#a36683b6f0eb124ab5a7c462b3f3ca1cc',1,'BCastCommunicator::my_rank()'],['../struct_log.html#a36683b6f0eb124ab5a7c462b3f3ca1cc',1,'Log::my_rank()']]]
 ];

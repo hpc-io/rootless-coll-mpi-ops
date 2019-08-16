@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.15"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>RootlessOps: /Users/tonglin/nersc_dev_sync/rootless/rootless_ops.c File Reference</title>
+<title>RLO: /Users/tonglin/nersc_dev_sync/rootless/rootless_ops.c File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -21,7 +21,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">RootlessOps
+   <div id="projectname">RLO
    </div>
   </td>
  </tr>
@@ -80,7 +80,11 @@ $(function() {
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Data Structures</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_engine_manager.html">EngineManager</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structqueue.html">queue</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_proposal__buf.html">Proposal_buf</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structbcomm__token__t.html">bcomm_token_t</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -110,8 +114,12 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
+<tr class="memitem:a629650ce1bb44cd798d473f0e7d064ff"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct_engine_manager.html">EngineManager</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a629650ce1bb44cd798d473f0e7d064ff">EngineManager</a></td></tr>
+<tr class="separator:a629650ce1bb44cd798d473f0e7d064ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a092902733e164e20a40f08447ef1705a"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structqueue.html">queue</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a092902733e164e20a40f08447ef1705a">queue</a></td></tr>
 <tr class="separator:a092902733e164e20a40f08447ef1705a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7fc8ad65c441255f28e658dc13b2afb0"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct_proposal__buf.html">Proposal_buf</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a></td></tr>
+<tr class="separator:a7fc8ad65c441255f28e658dc13b2afb0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a73bb00f388f3b86a1b7303dbfd3dbeae"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structbcomm__token__t.html">bcomm_token_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a73bb00f388f3b86a1b7303dbfd3dbeae">bcomm_token_t</a></td></tr>
 <tr class="separator:a73bb00f388f3b86a1b7303dbfd3dbeae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a20d2a1ffadc657c522c9309c5657a7ed"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct_b_cast_communicator.html">BCastCommunicator</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a20d2a1ffadc657c522c9309c5657a7ed">bcomm</a></td></tr>
@@ -133,10 +141,18 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ae7b64e5bea3cbdd4871884b564758c29"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ae7b64e5bea3cbdd4871884b564758c29">queue_append</a> (<a class="el" href="structqueue.html">queue</a> *q, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg)</td></tr>
-<tr class="separator:ae7b64e5bea3cbdd4871884b564758c29"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae824b5bbee718662b348d49ec7b52547"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ae824b5bbee718662b348d49ec7b52547">queue_remove</a> (<a class="el" href="structqueue.html">queue</a> *q, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg)</td></tr>
-<tr class="separator:ae824b5bbee718662b348d49ec7b52547"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9520bdbb6701d9826b11eff7108ce114"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_engine_manager.html">EngineManager</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a9520bdbb6701d9826b11eff7108ce114">engine_manager_new</a> ()</td></tr>
+<tr class="separator:a9520bdbb6701d9826b11eff7108ce114"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a44d60c710e23cf48f62523551aadcccb"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a44d60c710e23cf48f62523551aadcccb">queue_append</a> (<a class="el" href="structqueue.html">queue</a> *q, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg)</td></tr>
+<tr class="separator:a44d60c710e23cf48f62523551aadcccb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d45c72ec2c52e3ad6f8f29046ab08d7"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8d45c72ec2c52e3ad6f8f29046ab08d7">queue_remove</a> (<a class="el" href="structqueue.html">queue</a> *q, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg)</td></tr>
+<tr class="separator:a8d45c72ec2c52e3ad6f8f29046ab08d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab3486efc4c7e5a359919f3e792e330a2"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ab3486efc4c7e5a359919f3e792e330a2">pbuf_serialize</a> (<a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> pid_in, <a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a> vote, size_t data_len_in, char *data_in, char *buf_out, size_t *buf_len_out)</td></tr>
+<tr class="separator:ab3486efc4c7e5a359919f3e792e330a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a43a48c1130b776866dabf32e2cb59da5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a43a48c1130b776866dabf32e2cb59da5">pbuf_free</a> (<a class="el" href="rootless__ops_8c.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a> *pbuf)</td></tr>
+<tr class="separator:a43a48c1130b776866dabf32e2cb59da5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a087a015433923622b3f2609e43d7f68e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a087a015433923622b3f2609e43d7f68e">pbuf_deserialize</a> (char *buf_in, <a class="el" href="rootless__ops_8c.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a> *pbuf_out)</td></tr>
+<tr class="separator:a087a015433923622b3f2609e43d7f68e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9b84c0dccfb32a9c5a6fbce8f14bddb8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8c.html#a20d2a1ffadc657c522c9309c5657a7ed">bcomm</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a9b84c0dccfb32a9c5a6fbce8f14bddb8">bcomm_init</a> (MPI_Comm comm, size_t msg_size_max)</td></tr>
 <tr class="separator:a9b84c0dccfb32a9c5a6fbce8f14bddb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab6aa63d367d45c1f16262fc8e3d4e28a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ab6aa63d367d45c1f16262fc8e3d4e28a">get_origin</a> (void *buf_in)</td></tr>
@@ -145,118 +161,122 @@ Functions</h2></td></tr>
 <tr class="separator:a84db458d875b9d9d433a991f04eda064"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a61d544b6348efee83f11b196d8eb5a5f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a61d544b6348efee83f11b196d8eb5a5f">fwd_send_cnt</a> (const <a class="el" href="rootless__ops_8c.html#a20d2a1ffadc657c522c9309c5657a7ed">bcomm</a> *my_bcomm, int origin_rank, int from_rank)</td></tr>
 <tr class="separator:a61d544b6348efee83f11b196d8eb5a5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8d4c3a9ccb33dc3a64ada1ccd503e3d9"><td class="memItemLeft" align="right" valign="top">unsigned long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8d4c3a9ccb33dc3a64ada1ccd503e3d9">get_time_usec</a> ()</td></tr>
-<tr class="separator:a8d4c3a9ccb33dc3a64ada1ccd503e3d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae13f364c9ae4294486ce08098f3a60fd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ae13f364c9ae4294486ce08098f3a60fd">get_time_str</a> (char *str_out)</td></tr>
-<tr class="separator:ae13f364c9ae4294486ce08098f3a60fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a04d381047c1ff8b0e79644774097df7d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a04d381047c1ff8b0e79644774097df7d">get_world_size</a> ()</td></tr>
-<tr class="separator:a04d381047c1ff8b0e79644774097df7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a96d37189351a4bb07360939ae22dad03"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a96d37189351a4bb07360939ae22dad03">get_my_rank</a> ()</td></tr>
-<tr class="separator:a96d37189351a4bb07360939ae22dad03"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1fefd5b50c55e9f3cd379ecf3cdaa569"><td class="memItemLeft" align="right" valign="top">unsigned long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a1fefd5b50c55e9f3cd379ecf3cdaa569">RLO_get_time_usec</a> ()</td></tr>
+<tr class="separator:a1fefd5b50c55e9f3cd379ecf3cdaa569"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a90763af57444165add7ddcefa87be3c2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a90763af57444165add7ddcefa87be3c2">RLO_get_time_str</a> (char *str_out)</td></tr>
+<tr class="separator:a90763af57444165add7ddcefa87be3c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d9b55f59de520fa518f8cc53f097e18"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a7d9b55f59de520fa518f8cc53f097e18">RLO_get_world_size</a> ()</td></tr>
+<tr class="separator:a7d9b55f59de520fa518f8cc53f097e18"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a210cce07e854d2cd34ee23364fd0f80a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a210cce07e854d2cd34ee23364fd0f80a">RLO_get_my_rank</a> ()</td></tr>
+<tr class="separator:a210cce07e854d2cd34ee23364fd0f80a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a528738f40d4be59d5f523bb1b9222cd3"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a528738f40d4be59d5f523bb1b9222cd3">get_level</a> (int world_size, int rank)</td></tr>
 <tr class="separator:a528738f40d4be59d5f523bb1b9222cd3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5d0085a334c618502eab56b29fc491dd"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a5d0085a334c618502eab56b29fc491dd">proposal_state_init</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pp_in_out, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *prop_msg_in)</td></tr>
-<tr class="separator:a5d0085a334c618502eab56b29fc491dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a174b9d4b007bde393e8de7dd96092492"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a174b9d4b007bde393e8de7dd96092492">proposalPool_proposal_add</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pp_in)</td></tr>
-<tr class="separator:a174b9d4b007bde393e8de7dd96092492"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa241d9de7fb0fd3f979b2bb8ff47ce41"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#aa241d9de7fb0fd3f979b2bb8ff47ce41">proposalPool_proposal_setNeededVoteCnt</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> k, int cnt)</td></tr>
-<tr class="separator:aa241d9de7fb0fd3f979b2bb8ff47ce41"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa98d02102d66149197c851d551d26b5a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#aa98d02102d66149197c851d551d26b5a">proposalPool_vote_merge</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> k, <a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a> v, int *p_index_out)</td></tr>
-<tr class="separator:aa98d02102d66149197c851d551d26b5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a26d098dada6c1999cb336ed3088d4db4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a26d098dada6c1999cb336ed3088d4db4">proposalPool_get</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> k, <a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *result)</td></tr>
-<tr class="separator:a26d098dada6c1999cb336ed3088d4db4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a47d3e07901c2a59c7f61bc1ef6ffad27"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a47d3e07901c2a59c7f61bc1ef6ffad27">proposalPool_get_index</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> k)</td></tr>
-<tr class="separator:a47d3e07901c2a59c7f61bc1ef6ffad27"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:addb12205fdb68c41bd3945973a24e114"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#addb12205fdb68c41bd3945973a24e114">proposalPool_rm</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> k)</td></tr>
-<tr class="separator:addb12205fdb68c41bd3945973a24e114"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abbf3180393ac2c37d7715d4773d4f815"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#abbf3180393ac2c37d7715d4773d4f815">proposalPools_reset</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *pools)</td></tr>
-<tr class="separator:abbf3180393ac2c37d7715d4773d4f815"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a71ed38a11cb78fd4f89c58564c20a77d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a71ed38a11cb78fd4f89c58564c20a77d">msg_wait</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg_in)</td></tr>
-<tr class="separator:a71ed38a11cb78fd4f89c58564c20a77d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af68c2edd36abc0d9c4f22e6fe3decf26"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#af68c2edd36abc0d9c4f22e6fe3decf26">_test_ircecv_completed</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg_buf)</td></tr>
-<tr class="separator:af68c2edd36abc0d9c4f22e6fe3decf26"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a90714481c94a58998e8d512e1ca7bc39"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a90714481c94a58998e8d512e1ca7bc39">_post_irecv_gen</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *recv_msg_buf, enum <a class="el" href="rootless__ops_8h.html#a79cf93cdd02e55b7834032e5c1999aed">COM_TAGS</a> rcv_tag)</td></tr>
-<tr class="separator:a90714481c94a58998e8d512e1ca7bc39"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6135a5eeba0df883f8dea9759175f1f2"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a6135a5eeba0df883f8dea9759175f1f2">_wait_and_pickup_queue_process</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *en, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg)</td></tr>
-<tr class="separator:a6135a5eeba0df883f8dea9759175f1f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a58236912d85b044fd2520415b442bb63"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a58236912d85b044fd2520415b442bb63">_wait_only_queue_cleanup</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng)</td></tr>
-<tr class="separator:a58236912d85b044fd2520415b442bb63"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3a258fcb138772936440706bf0acf9b7"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a3a258fcb138772936440706bf0acf9b7">_iar_proposal_handler</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *recv_msg_buf_in)</td></tr>
-<tr class="separator:a3a258fcb138772936440706bf0acf9b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3586090ec4b6b4e57d0dd99c9900fa92"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a3586090ec4b6b4e57d0dd99c9900fa92">_iar_vote_handler</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *recv_msg_buf_in)</td></tr>
-<tr class="separator:a3586090ec4b6b4e57d0dd99c9900fa92"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9bb7f48f3b92a78e02175bbd1748f53f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a9bb7f48f3b92a78e02175bbd1748f53f">_iar_decision_handler</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *recv_msg_buf_in)</td></tr>
-<tr class="separator:a9bb7f48f3b92a78e02175bbd1748f53f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a27935416a0adb9382813e0060d584163"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a27935416a0adb9382813e0060d584163">_vote_back</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *ps, <a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a> vote)</td></tr>
-<tr class="separator:a27935416a0adb9382813e0060d584163"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa7e65dd6e40b2dea5630c4c802d9a7e0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#aa7e65dd6e40b2dea5630c4c802d9a7e0">_iar_decision_bcast</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> my_proposal_id, <a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a> decision)</td></tr>
-<tr class="separator:aa7e65dd6e40b2dea5630c4c802d9a7e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab8fa5e9a1398d48828dbe8faaf5a066a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ab8fa5e9a1398d48828dbe8faaf5a066a">_vote_merge</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, int pid, <a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a> vote_in, <a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *ps_out)</td></tr>
-<tr class="separator:ab8fa5e9a1398d48828dbe8faaf5a066a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f2bc5e829f524fe579c3c096a2697a4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a2f2bc5e829f524fe579c3c096a2697a4">_find_proposal_msg</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> pid)</td></tr>
-<tr class="separator:a2f2bc5e829f524fe579c3c096a2697a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4cbf8ddd0ca084b4214e81aa6796b99a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a4cbf8ddd0ca084b4214e81aa6796b99a">_bc_forward</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg)</td></tr>
-<tr class="separator:a4cbf8ddd0ca084b4214e81aa6796b99a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adfae6b1ebdfc1517f9e4fbbcb2377a04"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#adfae6b1ebdfc1517f9e4fbbcb2377a04">msg_new_generic</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng)</td></tr>
-<tr class="separator:adfae6b1ebdfc1517f9e4fbbcb2377a04"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaeb773404a89298f889f59ba38d59a3c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#aaeb773404a89298f889f59ba38d59a3c">msg_new_bc</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, void *buf_in, int send_size)</td></tr>
-<tr class="separator:aaeb773404a89298f889f59ba38d59a3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a163d34ba531bd00979431151f72ec1eb"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a163d34ba531bd00979431151f72ec1eb">msg_test_isends</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg_in)</td></tr>
-<tr class="separator:a163d34ba531bd00979431151f72ec1eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5c8d1c5f07749aaa8c684018975b9bd4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a5c8d1c5f07749aaa8c684018975b9bd4">msg_free</a> (<a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg_in)</td></tr>
-<tr class="separator:a5c8d1c5f07749aaa8c684018975b9bd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c2407e76ba9b1c8e67ed8e14012f8e1"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a1c2407e76ba9b1c8e67ed8e14012f8e1">proposal_state_init</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pp_in_out, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *prop_msg_in)</td></tr>
+<tr class="separator:a1c2407e76ba9b1c8e67ed8e14012f8e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a52853c940b1022ae5d734207906e04a6"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a52853c940b1022ae5d734207906e04a6">proposalPool_proposal_add</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pp_in)</td></tr>
+<tr class="separator:a52853c940b1022ae5d734207906e04a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a701e0c1c7c25b91fde6b6a1f059c6ccf"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a701e0c1c7c25b91fde6b6a1f059c6ccf">proposalPool_proposal_setNeededVoteCnt</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> k, int cnt)</td></tr>
+<tr class="separator:a701e0c1c7c25b91fde6b6a1f059c6ccf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2ff5148e2f8db54e06da0ecc334f265"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#af2ff5148e2f8db54e06da0ecc334f265">proposalPool_vote_merge</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> k, <a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a> v, int *p_index_out)</td></tr>
+<tr class="separator:af2ff5148e2f8db54e06da0ecc334f265"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af73b29e5149d41b66ab659bfd3e2ad01"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#af73b29e5149d41b66ab659bfd3e2ad01">proposalPool_get</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> k, <a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *result)</td></tr>
+<tr class="separator:af73b29e5149d41b66ab659bfd3e2ad01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0128cff12e2d6df153fe23f22e2e1c4f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a0128cff12e2d6df153fe23f22e2e1c4f">proposalPool_get_index</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> k)</td></tr>
+<tr class="separator:a0128cff12e2d6df153fe23f22e2e1c4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63193a1c9234f38e11f62d21fa953607"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a63193a1c9234f38e11f62d21fa953607">proposalPool_rm</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pools, <a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> k)</td></tr>
+<tr class="separator:a63193a1c9234f38e11f62d21fa953607"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8cb36d3ef33582a5eb1b91b213873a08"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8cb36d3ef33582a5eb1b91b213873a08">proposalPools_reset</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *pools)</td></tr>
+<tr class="separator:a8cb36d3ef33582a5eb1b91b213873a08"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afdde522515268979e938dbd1086d7416"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#afdde522515268979e938dbd1086d7416">msg_wait</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg_in)</td></tr>
+<tr class="separator:afdde522515268979e938dbd1086d7416"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab44426cb59853069dbb8a03775944372"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ab44426cb59853069dbb8a03775944372">make_progress_gen</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> **recv_msg_out)</td></tr>
+<tr class="separator:ab44426cb59853069dbb8a03775944372"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abd7024ee81a761e570378251a017bdd9"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#abd7024ee81a761e570378251a017bdd9">_test_ircecv_completed</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg_buf)</td></tr>
+<tr class="separator:abd7024ee81a761e570378251a017bdd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08769f30f2eeb713f29ecaa7c05e4906"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a08769f30f2eeb713f29ecaa7c05e4906">_post_irecv_gen</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *recv_msg_buf, enum <a class="el" href="rootless__ops_8h.html#a4d1e332f04588d889cd6d8b36c61d7dd">RLO_COMM_TAGS</a> rcv_tag)</td></tr>
+<tr class="separator:a08769f30f2eeb713f29ecaa7c05e4906"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ac8c32fb6191f0d38c61832ded99b92"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8ac8c32fb6191f0d38c61832ded99b92">_wait_and_pickup_queue_process</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *en, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg)</td></tr>
+<tr class="separator:a8ac8c32fb6191f0d38c61832ded99b92"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f3e2459c06ae8af581c504a835dad97"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8f3e2459c06ae8af581c504a835dad97">_wait_only_queue_cleanup</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:a8f3e2459c06ae8af581c504a835dad97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a728db595ab2f20d3fb172ff513b67610"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a728db595ab2f20d3fb172ff513b67610">_iar_proposal_handler</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *recv_msg_buf_in)</td></tr>
+<tr class="separator:a728db595ab2f20d3fb172ff513b67610"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4710fe45fca42ac76256a1c80f0ae411"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a4710fe45fca42ac76256a1c80f0ae411">_iar_vote_handler</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *recv_msg_buf_in)</td></tr>
+<tr class="separator:a4710fe45fca42ac76256a1c80f0ae411"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29c9bc6d99f723c2b7766d4df4c674b9"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a29c9bc6d99f723c2b7766d4df4c674b9">_iar_decision_handler</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *recv_msg_buf_in)</td></tr>
+<tr class="separator:a29c9bc6d99f723c2b7766d4df4c674b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad99a1d0bfc6d7b79cc9a05a576449c56"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ad99a1d0bfc6d7b79cc9a05a576449c56">_vote_back</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *ps, <a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a> vote)</td></tr>
+<tr class="separator:ad99a1d0bfc6d7b79cc9a05a576449c56"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a216f148851cf0d7d5bd7661764187309"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a216f148851cf0d7d5bd7661764187309">_iar_decision_bcast</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> my_proposal_id, <a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a> decision)</td></tr>
+<tr class="separator:a216f148851cf0d7d5bd7661764187309"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4c44acd0d836f813a414a904c1872c9a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a4c44acd0d836f813a414a904c1872c9a">_vote_merge</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, int pid, <a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a> vote_in, <a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *ps_out)</td></tr>
+<tr class="separator:a4c44acd0d836f813a414a904c1872c9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a220640a4e994eb66b65269d2b08e610e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a220640a4e994eb66b65269d2b08e610e">_find_proposal_msg</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> pid)</td></tr>
+<tr class="separator:a220640a4e994eb66b65269d2b08e610e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60d3bc848346264072d9a151527b1fd4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a60d3bc848346264072d9a151527b1fd4">_bc_forward</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg)</td></tr>
+<tr class="separator:a60d3bc848346264072d9a151527b1fd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac99a39d9890b9fbf9fcab9551eb0130c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ac99a39d9890b9fbf9fcab9551eb0130c">RLO_msg_new_generic</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:ac99a39d9890b9fbf9fcab9551eb0130c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97706efb7fa21f8dfda368eb1dd0c32b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a97706efb7fa21f8dfda368eb1dd0c32b">RLO_msg_new_bc</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, void *buf_in, int send_size)</td></tr>
+<tr class="separator:a97706efb7fa21f8dfda368eb1dd0c32b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73348e65206ace6fd28662af986b4a8a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a73348e65206ace6fd28662af986b4a8a">RLO_msg_test_isends</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg_in)</td></tr>
+<tr class="separator:a73348e65206ace6fd28662af986b4a8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae4b85be330fbb9e1b089862dba85818f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ae4b85be330fbb9e1b089862dba85818f">RLO_msg_free</a> (<a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg_in)</td></tr>
+<tr class="separator:ae4b85be330fbb9e1b089862dba85818f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1039abc6f129d6f349136dc350781293"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a1039abc6f129d6f349136dc350781293">_queue_debug_print</a> (<a class="el" href="structqueue.html">queue</a> *q)</td></tr>
 <tr class="separator:a1039abc6f129d6f349136dc350781293"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afb40820e1d008cf193e28830056e3ae5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#afb40820e1d008cf193e28830056e3ae5">progress_engine_new</a> (MPI_Comm mpi_comm, size_t msg_size_max, void *approv_cb_func, void *app_ctx, void *app_proposal_action)</td></tr>
-<tr class="separator:afb40820e1d008cf193e28830056e3ae5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a983ddcbcea1231dc5e8ea8fd8d3b1c98"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a983ddcbcea1231dc5e8ea8fd8d3b1c98">progress_engine_free</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng)</td></tr>
-<tr class="separator:a983ddcbcea1231dc5e8ea8fd8d3b1c98"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a85d0e3a5ad3743c517ecd4923151e6d7"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a85d0e3a5ad3743c517ecd4923151e6d7">make_progress_gen</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> **recv_msg_out)</td></tr>
-<tr class="separator:a85d0e3a5ad3743c517ecd4923151e6d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ef2ef36ab1f226a1b98467d3bc44808"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a3ef2ef36ab1f226a1b98467d3bc44808">engine_append</a> (<a class="el" href="struct_engine_manager.html">EngineManager</a> *q, <a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:a3ef2ef36ab1f226a1b98467d3bc44808"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a05ea094bc2b10e14ab09ebc174a1ab14"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a05ea094bc2b10e14ab09ebc174a1ab14">engine_remove</a> (<a class="el" href="struct_engine_manager.html">EngineManager</a> *q, <a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:a05ea094bc2b10e14ab09ebc174a1ab14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1444386ba539ca8bc98193b797b40472"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a1444386ba539ca8bc98193b797b40472">RLO_progress_engine_new</a> (MPI_Comm mpi_comm, size_t msg_size_max, void *approv_cb_func, void *app_ctx, void *app_proposal_action)</td></tr>
+<tr class="separator:a1444386ba539ca8bc98193b797b40472"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa6d0f54b7843fad323a5f2b2ed9e603b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#aa6d0f54b7843fad323a5f2b2ed9e603b">RLO_get_engine_id</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:aa6d0f54b7843fad323a5f2b2ed9e603b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d4bf3d9ea99bad02d4a2205e1909bbb"><td class="memItemLeft" align="right" valign="top">MPI_Comm&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a6d4bf3d9ea99bad02d4a2205e1909bbb">RLO_get_my_comm</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:a6d4bf3d9ea99bad02d4a2205e1909bbb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa694fc539f1260f470a4de3f72de5fad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#aa694fc539f1260f470a4de3f72de5fad">progress_engine_free</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:aa694fc539f1260f470a4de3f72de5fad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c88a0e0a210066eb8e0b539c564ef95"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a2c88a0e0a210066eb8e0b539c564ef95">RLO_make_progress_all</a> ()</td></tr>
+<tr class="separator:a2c88a0e0a210066eb8e0b539c564ef95"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adf499789f7af970630cc5ffe08baa5e3"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#adf499789f7af970630cc5ffe08baa5e3">_proposal_pickup_next</a> ()</td></tr>
 <tr class="separator:adf499789f7af970630cc5ffe08baa5e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a00845920229eb79b5ad7f0bc5bd4aee5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a00845920229eb79b5ad7f0bc5bd4aee5">proposal_succeeded</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng)</td></tr>
-<tr class="separator:a00845920229eb79b5ad7f0bc5bd4aee5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeee287ed54be971eb9a2844e467684fc"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#aeee287ed54be971eb9a2844e467684fc">check_proposal_state</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, int pid)</td></tr>
-<tr class="separator:aeee287ed54be971eb9a2844e467684fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9c18a567b3daa510822ad3015201e582"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a9c18a567b3daa510822ad3015201e582">iar_submit_proposal</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, char *proposal, unsigned long prop_size, <a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> my_proposal_id)</td></tr>
-<tr class="separator:a9c18a567b3daa510822ad3015201e582"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5d6b4fd5f610884478e1be79a33ca83d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structuser__msg.html">user_msg</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a5d6b4fd5f610884478e1be79a33ca83d">_user_msg_mock</a> (<a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *gen_msg_in)</td></tr>
-<tr class="separator:a5d6b4fd5f610884478e1be79a33ca83d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a535fd49f9096cdf8d04d99cf225a438a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a535fd49f9096cdf8d04d99cf225a438a">user_pickup_next</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="structuser__msg.html">user_msg</a> **msg_out)</td></tr>
-<tr class="separator:a535fd49f9096cdf8d04d99cf225a438a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4e2c48ed27715194fb4a7ff94cf6f122"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a4e2c48ed27715194fb4a7ff94cf6f122">user_msg_recycle</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="structuser__msg.html">user_msg</a> *msg_in)</td></tr>
-<tr class="separator:a4e2c48ed27715194fb4a7ff94cf6f122"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2be884700ba6ba25180a40f709f798fc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#a558434a4e0b889047c84ac066ba26d1b">Req_stat</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a2be884700ba6ba25180a40f709f798fc">_iar_check_status</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, int pid)</td></tr>
-<tr class="separator:a2be884700ba6ba25180a40f709f798fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a21365b9cd146704156a27c4e11518ed5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a21365b9cd146704156a27c4e11518ed5">_iar_pending_queue_update_status</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, int pid, <a class="el" href="rootless__ops_8h.html#a558434a4e0b889047c84ac066ba26d1b">Req_stat</a> stat_in)</td></tr>
-<tr class="separator:a21365b9cd146704156a27c4e11518ed5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a012a9f8ab4dd53d4170dd45bd650a3d3"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a012a9f8ab4dd53d4170dd45bd650a3d3">_iar_pending_queue_process</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *decision_msg_in)</td></tr>
-<tr class="separator:a012a9f8ab4dd53d4170dd45bd650a3d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af97eb609b5a6503579545312a68b0a40"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#af97eb609b5a6503579545312a68b0a40">_iar_process_infra_q_msg</a> (<a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg)</td></tr>
-<tr class="separator:af97eb609b5a6503579545312a68b0a40"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a08e9331ba405fc6e9e12091ab7513a08"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a08e9331ba405fc6e9e12091ab7513a08">pbuf_serialize</a> (<a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> pid_in, <a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a> vote, size_t data_len_in, char *data_in, char *buf_out, size_t *buf_len_out)</td></tr>
-<tr class="separator:a08e9331ba405fc6e9e12091ab7513a08"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a43a48c1130b776866dabf32e2cb59da5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a43a48c1130b776866dabf32e2cb59da5">pbuf_free</a> (<a class="el" href="rootless__ops_8h.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a> *pbuf)</td></tr>
-<tr class="separator:a43a48c1130b776866dabf32e2cb59da5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a087a015433923622b3f2609e43d7f68e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a087a015433923622b3f2609e43d7f68e">pbuf_deserialize</a> (char *buf_in, <a class="el" href="rootless__ops_8h.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a> *pbuf_out)</td></tr>
-<tr class="separator:a087a015433923622b3f2609e43d7f68e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a455319f852f14f0c3e456813ba2104ac"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a455319f852f14f0c3e456813ba2104ac">make_pid</a> (<a class="el" href="rootless__ops_8c.html#a20d2a1ffadc657c522c9309c5657a7ed">bcomm</a> *my_bcomm)</td></tr>
-<tr class="separator:a455319f852f14f0c3e456813ba2104ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5caf95833e8f037beff80c432067bd8d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a5caf95833e8f037beff80c432067bd8d">proposal_succeeded</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:a5caf95833e8f037beff80c432067bd8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea13a526a70c0070397b7c63c3dda3d0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#aea13a526a70c0070397b7c63c3dda3d0">RLO_check_proposal_state</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, int pid)</td></tr>
+<tr class="separator:aea13a526a70c0070397b7c63c3dda3d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af71d40cbba9e2e15caae8d0ed80d31da"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#af71d40cbba9e2e15caae8d0ed80d31da">RLO_submit_proposal</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, char *proposal, unsigned long prop_size, <a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> my_proposal_id)</td></tr>
+<tr class="separator:af71d40cbba9e2e15caae8d0ed80d31da"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a800ae96bc868a2fa3fe42eb852b4b232"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#a38c31d17c9e8cdebffe6a6e90b595822">RLO_user_msg</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a800ae96bc868a2fa3fe42eb852b4b232">_user_msg_mock</a> (<a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *gen_msg_in)</td></tr>
+<tr class="separator:a800ae96bc868a2fa3fe42eb852b4b232"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bd143cbf2d29981fabddaa266b6fc20"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8bd143cbf2d29981fabddaa266b6fc20">RLO_user_pickup_next</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#a38c31d17c9e8cdebffe6a6e90b595822">RLO_user_msg</a> **msg_out)</td></tr>
+<tr class="separator:a8bd143cbf2d29981fabddaa266b6fc20"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1eb01b5ad6654228bc220140db1cd59f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a1eb01b5ad6654228bc220140db1cd59f">RLO_user_msg_recycle</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#a38c31d17c9e8cdebffe6a6e90b595822">RLO_user_msg</a> *msg_in)</td></tr>
+<tr class="separator:a1eb01b5ad6654228bc220140db1cd59f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac971ae0d175e65227e63fd7b568218f6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#a6ff4e18eab7584f33dad5592dba167f9">RLO_Req_stat</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ac971ae0d175e65227e63fd7b568218f6">_iar_check_status</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, int pid)</td></tr>
+<tr class="separator:ac971ae0d175e65227e63fd7b568218f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace57e7cf7bf73b45a59d060cce1723ee"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ace57e7cf7bf73b45a59d060cce1723ee">_iar_pending_queue_update_status</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, int pid, <a class="el" href="rootless__ops_8h.html#a6ff4e18eab7584f33dad5592dba167f9">RLO_Req_stat</a> stat_in)</td></tr>
+<tr class="separator:ace57e7cf7bf73b45a59d060cce1723ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e5bd8f4ae2434d0124d49fb1a4d1b38"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a5e5bd8f4ae2434d0124d49fb1a4d1b38">_iar_pending_queue_process</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *decision_msg_in)</td></tr>
+<tr class="separator:a5e5bd8f4ae2434d0124d49fb1a4d1b38"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a7f0cec03b447d20202190307119e8a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a5a7f0cec03b447d20202190307119e8a">_iar_process_infra_q_msg</a> (<a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg)</td></tr>
+<tr class="separator:a5a7f0cec03b447d20202190307119e8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0f4479cd1968d7dcc9bed76ca140512"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ab0f4479cd1968d7dcc9bed76ca140512">make_pid</a> (<a class="el" href="rootless__ops_8c.html#a20d2a1ffadc657c522c9309c5657a7ed">bcomm</a> *my_bcomm)</td></tr>
+<tr class="separator:ab0f4479cd1968d7dcc9bed76ca140512"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae2db505ce093c1e145f611cb1268880e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ae2db505ce093c1e145f611cb1268880e">is_powerof2</a> (int n)</td></tr>
 <tr class="separator:ae2db505ce093c1e145f611cb1268880e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a26dce570559aeaebe53eb58d63cad00e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a26dce570559aeaebe53eb58d63cad00e">last_wall</a> (int rank)</td></tr>
 <tr class="separator:a26dce570559aeaebe53eb58d63cad00e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7beb590d94e1f930949119b44852b0ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a7beb590d94e1f930949119b44852b0ac">bcomm_free</a> (<a class="el" href="rootless__ops_8c.html#a20d2a1ffadc657c522c9309c5657a7ed">bcomm</a> *my_bcomm)</td></tr>
 <tr class="separator:a7beb590d94e1f930949119b44852b0ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a21251234c8620f91ad2160f8ab2f242a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a21251234c8620f91ad2160f8ab2f242a">bcast_gen</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *msg_in, enum <a class="el" href="rootless__ops_8h.html#a79cf93cdd02e55b7834032e5c1999aed">COM_TAGS</a> tag)</td></tr>
-<tr class="separator:a21251234c8620f91ad2160f8ab2f242a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a224a1cb1a6b6da4caa26915eecf0efc8"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a224a1cb1a6b6da4caa26915eecf0efc8">engine_cleanup</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng)</td></tr>
-<tr class="separator:a224a1cb1a6b6da4caa26915eecf0efc8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abbd1c07c9c6f9cd14cf69cde6be3875d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#abbd1c07c9c6f9cd14cf69cde6be3875d">proposal_reset</a> (<a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *ps)</td></tr>
-<tr class="separator:abbd1c07c9c6f9cd14cf69cde6be3875d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4347f6be1e0d63529ffa65d36166229e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a4347f6be1e0d63529ffa65d36166229e">get_vote_my_proposal</a> (<a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *eng)</td></tr>
-<tr class="separator:a4347f6be1e0d63529ffa65d36166229e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8dedb85a923077a62353c8055b4f0e32"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8dedb85a923077a62353c8055b4f0e32">RLO_bcast_gen</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng, <a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *msg_in, enum <a class="el" href="rootless__ops_8h.html#a4d1e332f04588d889cd6d8b36c61d7dd">RLO_COMM_TAGS</a> tag)</td></tr>
+<tr class="separator:a8dedb85a923077a62353c8055b4f0e32"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9226ac0bc7f1065c5434a098730499f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ae9226ac0bc7f1065c5434a098730499f">RLO_progress_engine_cleanup</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:ae9226ac0bc7f1065c5434a098730499f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8cd3aff5fb033e645c137f5cecd8327c"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8cd3aff5fb033e645c137f5cecd8327c">RLO_proposal_reset</a> (<a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *ps)</td></tr>
+<tr class="separator:a8cd3aff5fb033e645c137f5cecd8327c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e346fdceda7b20a2f3f537c61cbbc22"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a8e346fdceda7b20a2f3f537c61cbbc22">RLO_get_vote_my_proposal</a> (<a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *eng)</td></tr>
+<tr class="separator:a8e346fdceda7b20a2f3f537c61cbbc22"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adfe947c604145c686791e6c951054b11"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#adfe947c604145c686791e6c951054b11">native_benchmark_single_point_bcast</a> (MPI_Comm my_comm, int root_rank, int cnt, int buf_size)</td></tr>
 <tr class="separator:adfe947c604145c686791e6c951054b11"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad260973d6d4971eacb61fbfa0985a593"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#ad260973d6d4971eacb61fbfa0985a593">queue_test</a> (int cnt)</td></tr>
@@ -264,6 +284,8 @@ Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
+<tr class="memitem:a89de2a20e0b9aa5aa36df7cdf33daf3a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_engine_manager.html">EngineManager</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a89de2a20e0b9aa5aa36df7cdf33daf3a">Active_Engines</a></td></tr>
+<tr class="separator:a89de2a20e0b9aa5aa36df7cdf33daf3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5dc54cf4131d05d0e9e3d5648b4b1f40"><td class="memItemLeft" align="right" valign="top">char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a5dc54cf4131d05d0e9e3d5648b4b1f40">DEBUG_MODE</a> = 'O'</td></tr>
 <tr class="separator:a5dc54cf4131d05d0e9e3d5648b4b1f40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a583e1a2be175748fb8a4b8a0673caf16"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_log.html">Log</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rootless__ops_8c.html#a583e1a2be175748fb8a4b8a0673caf16">MY_LOG</a></td></tr>
@@ -295,6 +317,9 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+<p>Rootless Operations for MPI (RLO) Copyright (c) 2019, The Regents of the University of California, through Lawrence Berkeley National Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy). All rights reserved.</p>
+<p>If you have questions about your rights to use or distribute this software, please contact Berkeley Lab's Intellectual Property Office at <a href="#" onclick="location.href='mai'+'lto:'+'IPO'+'@l'+'bl.'+'go'+'v'; return false;">IPO@l<span style="display: none;">.nosp@m.</span>bl.g<span style="display: none;">.nosp@m.</span>ov</a>.</p>
+<p>NOTICE. This Software was developed under funding from the U.S. Department of Energy and the U.S. Government consequently retains certain rights. As such, the U.S. Government has been granted for itself and others acting on its behalf a paid-up, nonexclusive, irrevocable, worldwide license in the Software to reproduce, distribute copies to the public, prepare derivative works, and perform publicly and display publicly, and to permit other to do so. </p>
 
 </div>
 </div>
@@ -355,6 +380,20 @@ Variables</h2></td></tr>
 
 </div>
 </div>
+<a id="a629650ce1bb44cd798d473f0e7d064ff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a629650ce1bb44cd798d473f0e7d064ff">&#9670;&nbsp;</a></span>EngineManager</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef struct <a class="el" href="struct_engine_manager.html">EngineManager</a>  <a class="el" href="struct_engine_manager.html">EngineManager</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a82d40373f7ee594dadb215468dc51d4b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a82d40373f7ee594dadb215468dc51d4b">&#9670;&nbsp;</a></span>isend_state</h2>
 
@@ -363,6 +402,20 @@ Variables</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">typedef struct <a class="el" href="structisend__state.html">isend_state</a> <a class="el" href="structisend__state.html">isend_state</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a7fc8ad65c441255f28e658dc13b2afb0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7fc8ad65c441255f28e658dc13b2afb0">&#9670;&nbsp;</a></span>PBuf</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef struct <a class="el" href="struct_proposal__buf.html">Proposal_buf</a> <a class="el" href="rootless__ops_8c.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -416,8 +469,8 @@ Variables</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a4cbf8ddd0ca084b4214e81aa6796b99a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4cbf8ddd0ca084b4214e81aa6796b99a">&#9670;&nbsp;</a></span>_bc_forward()</h2>
+<a id="a60d3bc848346264072d9a151527b1fd4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a60d3bc848346264072d9a151527b1fd4">&#9670;&nbsp;</a></span>_bc_forward()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -425,13 +478,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _bc_forward </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>msg</em>&#160;</td>
         </tr>
         <tr>
@@ -444,22 +497,22 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a2f2bc5e829f524fe579c3c096a2697a4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2f2bc5e829f524fe579c3c096a2697a4">&#9670;&nbsp;</a></span>_find_proposal_msg()</h2>
+<a id="a220640a4e994eb66b65269d2b08e610e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a220640a4e994eb66b65269d2b08e610e">&#9670;&nbsp;</a></span>_find_proposal_msg()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> * _find_proposal_msg </td>
+          <td class="memname"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> * _find_proposal_msg </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
           <td class="paramname"><em>pid</em>&#160;</td>
         </tr>
         <tr>
@@ -472,16 +525,16 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a2be884700ba6ba25180a40f709f798fc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2be884700ba6ba25180a40f709f798fc">&#9670;&nbsp;</a></span>_iar_check_status()</h2>
+<a id="ac971ae0d175e65227e63fd7b568218f6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac971ae0d175e65227e63fd7b568218f6">&#9670;&nbsp;</a></span>_iar_check_status()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="rootless__ops_8h.html#a558434a4e0b889047c84ac066ba26d1b">Req_stat</a> _iar_check_status </td>
+          <td class="memname"><a class="el" href="rootless__ops_8h.html#a6ff4e18eab7584f33dad5592dba167f9">RLO_Req_stat</a> _iar_check_status </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
@@ -500,8 +553,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="aa7e65dd6e40b2dea5630c4c802d9a7e0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa7e65dd6e40b2dea5630c4c802d9a7e0">&#9670;&nbsp;</a></span>_iar_decision_bcast()</h2>
+<a id="a216f148851cf0d7d5bd7661764187309"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a216f148851cf0d7d5bd7661764187309">&#9670;&nbsp;</a></span>_iar_decision_bcast()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -509,19 +562,19 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _iar_decision_bcast </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
           <td class="paramname"><em>my_proposal_id</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a>&#160;</td>
           <td class="paramname"><em>decision</em>&#160;</td>
         </tr>
         <tr>
@@ -534,8 +587,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a9bb7f48f3b92a78e02175bbd1748f53f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9bb7f48f3b92a78e02175bbd1748f53f">&#9670;&nbsp;</a></span>_iar_decision_handler()</h2>
+<a id="a29c9bc6d99f723c2b7766d4df4c674b9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29c9bc6d99f723c2b7766d4df4c674b9">&#9670;&nbsp;</a></span>_iar_decision_handler()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -543,13 +596,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _iar_decision_handler </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>recv_msg_buf_in</em>&#160;</td>
         </tr>
         <tr>
@@ -562,8 +615,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a012a9f8ab4dd53d4170dd45bd650a3d3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a012a9f8ab4dd53d4170dd45bd650a3d3">&#9670;&nbsp;</a></span>_iar_pending_queue_process()</h2>
+<a id="a5e5bd8f4ae2434d0124d49fb1a4d1b38"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e5bd8f4ae2434d0124d49fb1a4d1b38">&#9670;&nbsp;</a></span>_iar_pending_queue_process()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -571,13 +624,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _iar_pending_queue_process </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>decision_msg_in</em>&#160;</td>
         </tr>
         <tr>
@@ -590,8 +643,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a21365b9cd146704156a27c4e11518ed5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a21365b9cd146704156a27c4e11518ed5">&#9670;&nbsp;</a></span>_iar_pending_queue_update_status()</h2>
+<a id="ace57e7cf7bf73b45a59d060cce1723ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace57e7cf7bf73b45a59d060cce1723ee">&#9670;&nbsp;</a></span>_iar_pending_queue_update_status()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -599,7 +652,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _iar_pending_queue_update_status </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
@@ -611,7 +664,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a558434a4e0b889047c84ac066ba26d1b">Req_stat</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a6ff4e18eab7584f33dad5592dba167f9">RLO_Req_stat</a>&#160;</td>
           <td class="paramname"><em>stat_in</em>&#160;</td>
         </tr>
         <tr>
@@ -624,8 +677,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="af97eb609b5a6503579545312a68b0a40"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af97eb609b5a6503579545312a68b0a40">&#9670;&nbsp;</a></span>_iar_process_infra_q_msg()</h2>
+<a id="a5a7f0cec03b447d20202190307119e8a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a7f0cec03b447d20202190307119e8a">&#9670;&nbsp;</a></span>_iar_process_infra_q_msg()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -633,7 +686,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _iar_process_infra_q_msg </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>msg</em></td><td>)</td>
           <td></td>
         </tr>
@@ -642,8 +695,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a3a258fcb138772936440706bf0acf9b7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3a258fcb138772936440706bf0acf9b7">&#9670;&nbsp;</a></span>_iar_proposal_handler()</h2>
+<a id="a728db595ab2f20d3fb172ff513b67610"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a728db595ab2f20d3fb172ff513b67610">&#9670;&nbsp;</a></span>_iar_proposal_handler()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -651,13 +704,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _iar_proposal_handler </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>recv_msg_buf_in</em>&#160;</td>
         </tr>
         <tr>
@@ -670,8 +723,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a3586090ec4b6b4e57d0dd99c9900fa92"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3586090ec4b6b4e57d0dd99c9900fa92">&#9670;&nbsp;</a></span>_iar_vote_handler()</h2>
+<a id="a4710fe45fca42ac76256a1c80f0ae411"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4710fe45fca42ac76256a1c80f0ae411">&#9670;&nbsp;</a></span>_iar_vote_handler()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -679,13 +732,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _iar_vote_handler </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>recv_msg_buf_in</em>&#160;</td>
         </tr>
         <tr>
@@ -698,8 +751,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a90714481c94a58998e8d512e1ca7bc39"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a90714481c94a58998e8d512e1ca7bc39">&#9670;&nbsp;</a></span>_post_irecv_gen()</h2>
+<a id="a08769f30f2eeb713f29ecaa7c05e4906"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a08769f30f2eeb713f29ecaa7c05e4906">&#9670;&nbsp;</a></span>_post_irecv_gen()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -707,19 +760,19 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _post_irecv_gen </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>recv_msg_buf</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">enum <a class="el" href="rootless__ops_8h.html#a79cf93cdd02e55b7834032e5c1999aed">COM_TAGS</a>&#160;</td>
+          <td class="paramtype">enum <a class="el" href="rootless__ops_8h.html#a4d1e332f04588d889cd6d8b36c61d7dd">RLO_COMM_TAGS</a>&#160;</td>
           <td class="paramname"><em>rcv_tag</em>&#160;</td>
         </tr>
         <tr>
@@ -767,8 +820,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="af68c2edd36abc0d9c4f22e6fe3decf26"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af68c2edd36abc0d9c4f22e6fe3decf26">&#9670;&nbsp;</a></span>_test_ircecv_completed()</h2>
+<a id="abd7024ee81a761e570378251a017bdd9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abd7024ee81a761e570378251a017bdd9">&#9670;&nbsp;</a></span>_test_ircecv_completed()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -776,13 +829,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _test_ircecv_completed </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>msg_buf</em>&#160;</td>
         </tr>
         <tr>
@@ -795,16 +848,16 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a5d6b4fd5f610884478e1be79a33ca83d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5d6b4fd5f610884478e1be79a33ca83d">&#9670;&nbsp;</a></span>_user_msg_mock()</h2>
+<a id="a800ae96bc868a2fa3fe42eb852b4b232"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a800ae96bc868a2fa3fe42eb852b4b232">&#9670;&nbsp;</a></span>_user_msg_mock()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="structuser__msg.html">user_msg</a>* _user_msg_mock </td>
+          <td class="memname"><a class="el" href="rootless__ops_8h.html#a38c31d17c9e8cdebffe6a6e90b595822">RLO_user_msg</a>* _user_msg_mock </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>gen_msg_in</em></td><td>)</td>
           <td></td>
         </tr>
@@ -813,8 +866,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a27935416a0adb9382813e0060d584163"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a27935416a0adb9382813e0060d584163">&#9670;&nbsp;</a></span>_vote_back()</h2>
+<a id="ad99a1d0bfc6d7b79cc9a05a576449c56"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad99a1d0bfc6d7b79cc9a05a576449c56">&#9670;&nbsp;</a></span>_vote_back()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -822,19 +875,19 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _vote_back </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
           <td class="paramname"><em>ps</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a>&#160;</td>
           <td class="paramname"><em>vote</em>&#160;</td>
         </tr>
         <tr>
@@ -847,8 +900,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="ab8fa5e9a1398d48828dbe8faaf5a066a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab8fa5e9a1398d48828dbe8faaf5a066a">&#9670;&nbsp;</a></span>_vote_merge()</h2>
+<a id="a4c44acd0d836f813a414a904c1872c9a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4c44acd0d836f813a414a904c1872c9a">&#9670;&nbsp;</a></span>_vote_merge()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -856,7 +909,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _vote_merge </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
@@ -868,13 +921,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a>&#160;</td>
           <td class="paramname"><em>vote_in</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
           <td class="paramname"><em>ps_out</em>&#160;</td>
         </tr>
         <tr>
@@ -887,8 +940,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a6135a5eeba0df883f8dea9759175f1f2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6135a5eeba0df883f8dea9759175f1f2">&#9670;&nbsp;</a></span>_wait_and_pickup_queue_process()</h2>
+<a id="a8ac8c32fb6191f0d38c61832ded99b92"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ac8c32fb6191f0d38c61832ded99b92">&#9670;&nbsp;</a></span>_wait_and_pickup_queue_process()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -896,13 +949,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _wait_and_pickup_queue_process </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>en</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>msg</em>&#160;</td>
         </tr>
         <tr>
@@ -915,8 +968,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a58236912d85b044fd2520415b442bb63"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a58236912d85b044fd2520415b442bb63">&#9670;&nbsp;</a></span>_wait_only_queue_cleanup()</h2>
+<a id="a8f3e2459c06ae8af581c504a835dad97"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8f3e2459c06ae8af581c504a835dad97">&#9670;&nbsp;</a></span>_wait_only_queue_cleanup()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -924,57 +977,12 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int _wait_only_queue_cleanup </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
-
-</div>
-</div>
-<a id="a21251234c8620f91ad2160f8ab2f242a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a21251234c8620f91ad2160f8ab2f242a">&#9670;&nbsp;</a></span>bcast_gen()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int bcast_gen </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
-          <td class="paramname"><em>msg_in</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">enum <a class="el" href="rootless__ops_8h.html#a79cf93cdd02e55b7834032e5c1999aed">COM_TAGS</a>&#160;</td>
-          <td class="paramname"><em>tag</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Rootless broadcast, can be initiated at any rank without predefine a "root" like the one in MPI_Bcast(). </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">eng</td><td>the progress engine used </td></tr>
-    <tr><td class="paramname">msg_in</td><td>the message to bcast. By default, the user should only use <a class="el" href="rootless__ops_8h.html#aaeb773404a89298f889f59ba38d59a3c">msg_new_bc()</a> to make a new message. </td></tr>
-    <tr><td class="paramname">tag</td><td>used to specify the message type. By default, the user should only use BCAST. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="rootless__ops_8h.html#aaeb773404a89298f889f59ba38d59a3c">msg_new_bc()</a> </dd>
-<dd>
-<a class="el" href="rootless__ops_8h.html#adfae6b1ebdfc1517f9e4fbbcb2377a04">msg_new_generic()</a> </dd></dl>
 
 </div>
 </div>
@@ -1058,23 +1066,23 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="aeee287ed54be971eb9a2844e467684fc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aeee287ed54be971eb9a2844e467684fc">&#9670;&nbsp;</a></span>check_proposal_state()</h2>
+<a id="a3ef2ef36ab1f226a1b98467d3bc44808"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3ef2ef36ab1f226a1b98467d3bc44808">&#9670;&nbsp;</a></span>engine_append()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int check_proposal_state </td>
+          <td class="memname">int engine_append </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em>, </td>
+          <td class="paramtype"><a class="el" href="struct_engine_manager.html">EngineManager</a> *&#160;</td>
+          <td class="paramname"><em>q</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>pid</em>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -1086,22 +1094,48 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a224a1cb1a6b6da4caa26915eecf0efc8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a224a1cb1a6b6da4caa26915eecf0efc8">&#9670;&nbsp;</a></span>engine_cleanup()</h2>
+<a id="a9520bdbb6701d9826b11eff7108ce114"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9520bdbb6701d9826b11eff7108ce114">&#9670;&nbsp;</a></span>engine_manager_new()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int engine_cleanup </td>
+          <td class="memname"><a class="el" href="struct_engine_manager.html">EngineManager</a> * engine_manager_new </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em></td><td>)</td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Tear down an engine. It will free all resource used in eng. </p>
+
+</div>
+</div>
+<a id="a05ea094bc2b10e14ab09ebc174a1ab14"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a05ea094bc2b10e14ab09ebc174a1ab14">&#9670;&nbsp;</a></span>engine_remove()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int engine_remove </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_engine_manager.html">EngineManager</a> *&#160;</td>
+          <td class="paramname"><em>q</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -1167,23 +1201,6 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a96d37189351a4bb07360939ae22dad03"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a96d37189351a4bb07360939ae22dad03">&#9670;&nbsp;</a></span>get_my_rank()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int get_my_rank </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
 <a id="ab6aa63d367d45c1f16262fc8e3d4e28a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab6aa63d367d45c1f16262fc8e3d4e28a">&#9670;&nbsp;</a></span>get_origin()</h2>
 
@@ -1196,116 +1213,6 @@ Variables</h2></td></tr>
           <td class="paramtype">void *&#160;</td>
           <td class="paramname"><em>buf_in</em></td><td>)</td>
           <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ae13f364c9ae4294486ce08098f3a60fd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae13f364c9ae4294486ce08098f3a60fd">&#9670;&nbsp;</a></span>get_time_str()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void get_time_str </td>
-          <td>(</td>
-          <td class="paramtype">char *&#160;</td>
-          <td class="paramname"><em>str_out</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a8d4c3a9ccb33dc3a64ada1ccd503e3d9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8d4c3a9ccb33dc3a64ada1ccd503e3d9">&#9670;&nbsp;</a></span>get_time_usec()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">unsigned long get_time_usec </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a4347f6be1e0d63529ffa65d36166229e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4347f6be1e0d63529ffa65d36166229e">&#9670;&nbsp;</a></span>get_vote_my_proposal()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int get_vote_my_proposal </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a04d381047c1ff8b0e79644774097df7d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a04d381047c1ff8b0e79644774097df7d">&#9670;&nbsp;</a></span>get_world_size()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int get_world_size </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a9c18a567b3daa510822ad3015201e582"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9c18a567b3daa510822ad3015201e582">&#9670;&nbsp;</a></span>iar_submit_proposal()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int iar_submit_proposal </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">char *&#160;</td>
-          <td class="paramname"><em>proposal</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">unsigned long&#160;</td>
-          <td class="paramname"><em>prop_size</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
-          <td class="paramname"><em>my_proposal_id</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1348,14 +1255,14 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a455319f852f14f0c3e456813ba2104ac"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a455319f852f14f0c3e456813ba2104ac">&#9670;&nbsp;</a></span>make_pid()</h2>
+<a id="ab0f4479cd1968d7dcc9bed76ca140512"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0f4479cd1968d7dcc9bed76ca140512">&#9670;&nbsp;</a></span>make_pid()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a> make_pid </td>
+          <td class="memname"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a> make_pid </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="rootless__ops_8c.html#a20d2a1ffadc657c522c9309c5657a7ed">bcomm</a> *&#160;</td>
           <td class="paramname"><em>my_bcomm</em></td><td>)</td>
@@ -1366,8 +1273,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a85d0e3a5ad3743c517ecd4923151e6d7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a85d0e3a5ad3743c517ecd4923151e6d7">&#9670;&nbsp;</a></span>make_progress_gen()</h2>
+<a id="ab44426cb59853069dbb8a03775944372"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab44426cb59853069dbb8a03775944372">&#9670;&nbsp;</a></span>make_progress_gen()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1375,73 +1282,14 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int make_progress_gen </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> **&#160;</td>
-          <td class="paramname"><em>msg_out</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>The core of the progress engine. It's called to turn the "gears" of the progress engine so to push it to next state. </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">eng</td><td>the progress engine used </td></tr>
-    <tr><td class="paramname">msg_out</td><td>output message, only used to sample a message, for debugging purpose. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="a5c8d1c5f07749aaa8c684018975b9bd4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5c8d1c5f07749aaa8c684018975b9bd4">&#9670;&nbsp;</a></span>msg_free()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int msg_free </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
-          <td class="paramname"><em>msg_in</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="aaeb773404a89298f889f59ba38d59a3c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaeb773404a89298f889f59ba38d59a3c">&#9670;&nbsp;</a></span>msg_new_bc()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a>* msg_new_bc </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>buf_in</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>send_size</em>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> **&#160;</td>
+          <td class="paramname"><em>recv_msg_out</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -1453,61 +1301,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="adfae6b1ebdfc1517f9e4fbbcb2377a04"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adfae6b1ebdfc1517f9e4fbbcb2377a04">&#9670;&nbsp;</a></span>msg_new_generic()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a>* msg_new_generic </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Make a new generic type message. </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">eng</td><td>the progress engine used </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a message pointer </dd></dl>
-
-</div>
-</div>
-<a id="a163d34ba531bd00979431151f72ec1eb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a163d34ba531bd00979431151f72ec1eb">&#9670;&nbsp;</a></span>msg_test_isends()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int msg_test_isends </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
-          <td class="paramname"><em>msg_in</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a71ed38a11cb78fd4f89c58564c20a77d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a71ed38a11cb78fd4f89c58564c20a77d">&#9670;&nbsp;</a></span>msg_wait()</h2>
+<a id="afdde522515268979e938dbd1086d7416"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afdde522515268979e938dbd1086d7416">&#9670;&nbsp;</a></span>msg_wait()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1515,13 +1310,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int msg_wait </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
           <td class="paramname"><em>msg_in</em>&#160;</td>
         </tr>
         <tr>
@@ -1589,7 +1384,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8c.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a> *&#160;</td>
           <td class="paramname"><em>pbuf_out</em>&#160;</td>
         </tr>
         <tr>
@@ -1611,7 +1406,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">void pbuf_free </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8c.html#a7fc8ad65c441255f28e658dc13b2afb0">PBuf</a> *&#160;</td>
           <td class="paramname"><em>pbuf</em></td><td>)</td>
           <td></td>
         </tr>
@@ -1620,8 +1415,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a08e9331ba405fc6e9e12091ab7513a08"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a08e9331ba405fc6e9e12091ab7513a08">&#9670;&nbsp;</a></span>pbuf_serialize()</h2>
+<a id="ab3486efc4c7e5a359919f3e792e330a2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab3486efc4c7e5a359919f3e792e330a2">&#9670;&nbsp;</a></span>pbuf_serialize()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1629,13 +1424,13 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">int pbuf_serialize </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
           <td class="paramname"><em>pid_in</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a>&#160;</td>
           <td class="paramname"><em>vote</em>, </td>
         </tr>
         <tr>
@@ -1672,8 +1467,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a983ddcbcea1231dc5e8ea8fd8d3b1c98"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a983ddcbcea1231dc5e8ea8fd8d3b1c98">&#9670;&nbsp;</a></span>progress_engine_free()</h2>
+<a id="aa694fc539f1260f470a4de3f72de5fad"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa694fc539f1260f470a4de3f72de5fad">&#9670;&nbsp;</a></span>progress_engine_free()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1681,7 +1476,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">void progress_engine_free </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em></td><td>)</td>
           <td></td>
         </tr>
@@ -1690,14 +1485,697 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="afb40820e1d008cf193e28830056e3ae5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afb40820e1d008cf193e28830056e3ae5">&#9670;&nbsp;</a></span>progress_engine_new()</h2>
+<a id="a1c2407e76ba9b1c8e67ed8e14012f8e1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1c2407e76ba9b1c8e67ed8e14012f8e1">&#9670;&nbsp;</a></span>proposal_state_init()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a>* progress_engine_new </td>
+          <td class="memname">int proposal_state_init </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pp_in_out</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
+          <td class="paramname"><em>prop_msg_in</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5caf95833e8f037beff80c432067bd8d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5caf95833e8f037beff80c432067bd8d">&#9670;&nbsp;</a></span>proposal_succeeded()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int proposal_succeeded </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af73b29e5149d41b66ab659bfd3e2ad01"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af73b29e5149d41b66ab659bfd3e2ad01">&#9670;&nbsp;</a></span>proposalPool_get()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int proposalPool_get </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pools</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
+          <td class="paramname"><em>k</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>result</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a0128cff12e2d6df153fe23f22e2e1c4f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0128cff12e2d6df153fe23f22e2e1c4f">&#9670;&nbsp;</a></span>proposalPool_get_index()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int proposalPool_get_index </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pools</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
+          <td class="paramname"><em>k</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a52853c940b1022ae5d734207906e04a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a52853c940b1022ae5d734207906e04a6">&#9670;&nbsp;</a></span>proposalPool_proposal_add()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int proposalPool_proposal_add </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pools</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pp_in</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a701e0c1c7c25b91fde6b6a1f059c6ccf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a701e0c1c7c25b91fde6b6a1f059c6ccf">&#9670;&nbsp;</a></span>proposalPool_proposal_setNeededVoteCnt()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int proposalPool_proposal_setNeededVoteCnt </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pools</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
+          <td class="paramname"><em>k</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>cnt</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a63193a1c9234f38e11f62d21fa953607"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a63193a1c9234f38e11f62d21fa953607">&#9670;&nbsp;</a></span>proposalPool_rm()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int proposalPool_rm </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pools</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
+          <td class="paramname"><em>k</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af2ff5148e2f8db54e06da0ecc334f265"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af2ff5148e2f8db54e06da0ecc334f265">&#9670;&nbsp;</a></span>proposalPool_vote_merge()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int proposalPool_vote_merge </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pools</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
+          <td class="paramname"><em>k</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad5c8a353df14cdf29e94dac996c79058">RLO_Vote</a>&#160;</td>
+          <td class="paramname"><em>v</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *&#160;</td>
+          <td class="paramname"><em>p_index_out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8cb36d3ef33582a5eb1b91b213873a08"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8cb36d3ef33582a5eb1b91b213873a08">&#9670;&nbsp;</a></span>proposalPools_reset()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int proposalPools_reset </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
+          <td class="paramname"><em>pools</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a44d60c710e23cf48f62523551aadcccb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a44d60c710e23cf48f62523551aadcccb">&#9670;&nbsp;</a></span>queue_append()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int queue_append </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structqueue.html">queue</a> *&#160;</td>
+          <td class="paramname"><em>q</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
+          <td class="paramname"><em>msg</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8d45c72ec2c52e3ad6f8f29046ab08d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d45c72ec2c52e3ad6f8f29046ab08d7">&#9670;&nbsp;</a></span>queue_remove()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int queue_remove </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structqueue.html">queue</a> *&#160;</td>
+          <td class="paramname"><em>q</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
+          <td class="paramname"><em>msg</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad260973d6d4971eacb61fbfa0985a593"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad260973d6d4971eacb61fbfa0985a593">&#9670;&nbsp;</a></span>queue_test()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int queue_test </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>cnt</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8dedb85a923077a62353c8055b4f0e32"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8dedb85a923077a62353c8055b4f0e32">&#9670;&nbsp;</a></span>RLO_bcast_gen()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_bcast_gen </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
+          <td class="paramname"><em>msg_in</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">enum <a class="el" href="rootless__ops_8h.html#a4d1e332f04588d889cd6d8b36c61d7dd">RLO_COMM_TAGS</a>&#160;</td>
+          <td class="paramname"><em>tag</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Rootless broadcast, can be initiated at any rank without predefine a "root" like the one in MPI_Bcast(). </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">eng</td><td>the progress engine used </td></tr>
+    <tr><td class="paramname">msg_in</td><td>the message to bcast. By default, the user should only use msg_new_bc() to make a new message. </td></tr>
+    <tr><td class="paramname">tag</td><td>used to specify the message type. By default, the user should only use BCAST. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section see"><dt>See also</dt><dd>msg_new_bc() </dd>
+<dd>
+msg_new_generic() </dd></dl>
+
+</div>
+</div>
+<a id="aea13a526a70c0070397b7c63c3dda3d0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aea13a526a70c0070397b7c63c3dda3d0">&#9670;&nbsp;</a></span>RLO_check_proposal_state()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_check_proposal_state </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>pid</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa6d0f54b7843fad323a5f2b2ed9e603b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa6d0f54b7843fad323a5f2b2ed9e603b">&#9670;&nbsp;</a></span>RLO_get_engine_id()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_get_engine_id </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a6d4bf3d9ea99bad02d4a2205e1909bbb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6d4bf3d9ea99bad02d4a2205e1909bbb">&#9670;&nbsp;</a></span>RLO_get_my_comm()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">MPI_Comm RLO_get_my_comm </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a210cce07e854d2cd34ee23364fd0f80a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a210cce07e854d2cd34ee23364fd0f80a">&#9670;&nbsp;</a></span>RLO_get_my_rank()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_get_my_rank </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a90763af57444165add7ddcefa87be3c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a90763af57444165add7ddcefa87be3c2">&#9670;&nbsp;</a></span>RLO_get_time_str()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RLO_get_time_str </td>
+          <td>(</td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>str_out</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a1fefd5b50c55e9f3cd379ecf3cdaa569"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1fefd5b50c55e9f3cd379ecf3cdaa569">&#9670;&nbsp;</a></span>RLO_get_time_usec()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned long RLO_get_time_usec </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8e346fdceda7b20a2f3f537c61cbbc22"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8e346fdceda7b20a2f3f537c61cbbc22">&#9670;&nbsp;</a></span>RLO_get_vote_my_proposal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_get_vote_my_proposal </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Get current status/voting results of my own proposal </p><dl class="section return"><dt>Returns</dt><dd>-1 if not complete, 0 for being declined, 1 for being approved. </dd></dl>
+
+</div>
+</div>
+<a id="a7d9b55f59de520fa518f8cc53f097e18"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d9b55f59de520fa518f8cc53f097e18">&#9670;&nbsp;</a></span>RLO_get_world_size()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_get_world_size </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a2c88a0e0a210066eb8e0b539c564ef95"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c88a0e0a210066eb8e0b539c564ef95">&#9670;&nbsp;</a></span>RLO_make_progress_all()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_make_progress_all </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>The core of the progress engine. It's called to turn the "gears" of the progress engine so to push it to next state. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">eng</td><td>the progress engine used </td></tr>
+    <tr><td class="paramname">msg_out</td><td>output message, only used to sample a message, for debugging purpose. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ae4b85be330fbb9e1b089862dba85818f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae4b85be330fbb9e1b089862dba85818f">&#9670;&nbsp;</a></span>RLO_msg_free()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_msg_free </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
+          <td class="paramname"><em>msg_in</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a97706efb7fa21f8dfda368eb1dd0c32b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a97706efb7fa21f8dfda368eb1dd0c32b">&#9670;&nbsp;</a></span>RLO_msg_new_bc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a>* RLO_msg_new_bc </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>buf_in</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>send_size</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Prepare a message for bcast. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">eng</td><td>the progress engine used @buf_in: the data buffer that will be bcasted. @send_size: send buffer size </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a message pointer </dd></dl>
+
+</div>
+</div>
+<a id="ac99a39d9890b9fbf9fcab9551eb0130c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac99a39d9890b9fbf9fcab9551eb0130c">&#9670;&nbsp;</a></span>RLO_msg_new_generic()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a>* RLO_msg_new_generic </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Make a new generic type message. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">eng</td><td>the progress engine used </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a message pointer </dd></dl>
+
+</div>
+</div>
+<a id="a73348e65206ace6fd28662af986b4a8a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a73348e65206ace6fd28662af986b4a8a">&#9670;&nbsp;</a></span>RLO_msg_test_isends()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_msg_test_isends </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#af5d033e5b10a311f39c11e193bef05ef">RLO_msg_t</a> *&#160;</td>
+          <td class="paramname"><em>msg_in</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Check if a local message is done with it's communication job(bcast or forward). </p>
+
+</div>
+</div>
+<a id="ae9226ac0bc7f1065c5434a098730499f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae9226ac0bc7f1065c5434a098730499f">&#9670;&nbsp;</a></span>RLO_progress_engine_cleanup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_progress_engine_cleanup </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Tear down an engine. It will free all resource used in eng. </p>
+
+</div>
+</div>
+<a id="a1444386ba539ca8bc98193b797b40472"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1444386ba539ca8bc98193b797b40472">&#9670;&nbsp;</a></span>RLO_progress_engine_new()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a>* RLO_progress_engine_new </td>
           <td>(</td>
           <td class="paramtype">MPI_Comm&#160;</td>
           <td class="paramname"><em>mpi_comm</em>, </td>
@@ -1746,370 +2224,81 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="abbd1c07c9c6f9cd14cf69cde6be3875d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abbd1c07c9c6f9cd14cf69cde6be3875d">&#9670;&nbsp;</a></span>proposal_reset()</h2>
+<a id="a8cd3aff5fb033e645c137f5cecd8327c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8cd3aff5fb033e645c137f5cecd8327c">&#9670;&nbsp;</a></span>RLO_proposal_reset()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int proposal_reset </td>
+          <td class="memname">int RLO_proposal_reset </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1c3c49d1eb2525f7315a18bd330021ba">RLO_proposal_state</a> *&#160;</td>
           <td class="paramname"><em>ps</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
+<p>Clear all fields in a proposal, including associated proposal message. </p>
 
 </div>
 </div>
-<a id="a5d0085a334c618502eab56b29fc491dd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5d0085a334c618502eab56b29fc491dd">&#9670;&nbsp;</a></span>proposal_state_init()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int proposal_state_init </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pp_in_out</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
-          <td class="paramname"><em>prop_msg_in</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a00845920229eb79b5ad7f0bc5bd4aee5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a00845920229eb79b5ad7f0bc5bd4aee5">&#9670;&nbsp;</a></span>proposal_succeeded()</h2>
+<a id="af71d40cbba9e2e15caae8d0ed80d31da"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af71d40cbba9e2e15caae8d0ed80d31da">&#9670;&nbsp;</a></span>RLO_submit_proposal()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int proposal_succeeded </td>
+          <td class="memname">int RLO_submit_proposal </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
-          <td class="paramname"><em>eng</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a26d098dada6c1999cb336ed3088d4db4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a26d098dada6c1999cb336ed3088d4db4">&#9670;&nbsp;</a></span>proposalPool_get()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int proposalPool_get </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pools</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
-          <td class="paramname"><em>k</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>result</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a47d3e07901c2a59c7f61bc1ef6ffad27"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a47d3e07901c2a59c7f61bc1ef6ffad27">&#9670;&nbsp;</a></span>proposalPool_get_index()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int proposalPool_get_index </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pools</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
-          <td class="paramname"><em>k</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a174b9d4b007bde393e8de7dd96092492"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a174b9d4b007bde393e8de7dd96092492">&#9670;&nbsp;</a></span>proposalPool_proposal_add()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int proposalPool_proposal_add </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pools</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pp_in</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="aa241d9de7fb0fd3f979b2bb8ff47ce41"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa241d9de7fb0fd3f979b2bb8ff47ce41">&#9670;&nbsp;</a></span>proposalPool_proposal_setNeededVoteCnt()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int proposalPool_proposal_setNeededVoteCnt </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pools</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
-          <td class="paramname"><em>k</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>cnt</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="addb12205fdb68c41bd3945973a24e114"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#addb12205fdb68c41bd3945973a24e114">&#9670;&nbsp;</a></span>proposalPool_rm()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int proposalPool_rm </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pools</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
-          <td class="paramname"><em>k</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="aa98d02102d66149197c851d551d26b5a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa98d02102d66149197c851d551d26b5a">&#9670;&nbsp;</a></span>proposalPool_vote_merge()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int proposalPool_vote_merge </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pools</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ae085c1452c9f8edb0185784fd36b66d3">ID</a>&#160;</td>
-          <td class="paramname"><em>k</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#abf357169cdd91c70fa1d89301ee049ae">Vote</a>&#160;</td>
-          <td class="paramname"><em>v</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int *&#160;</td>
-          <td class="paramname"><em>p_index_out</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="abbf3180393ac2c37d7715d4773d4f815"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abbf3180393ac2c37d7715d4773d4f815">&#9670;&nbsp;</a></span>proposalPools_reset()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int proposalPools_reset </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aebbf4f0238c22b32ffa130ba27a3b140">proposal_state</a> *&#160;</td>
-          <td class="paramname"><em>pools</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ae7b64e5bea3cbdd4871884b564758c29"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae7b64e5bea3cbdd4871884b564758c29">&#9670;&nbsp;</a></span>queue_append()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int queue_append </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structqueue.html">queue</a> *&#160;</td>
-          <td class="paramname"><em>q</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
-          <td class="paramname"><em>msg</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ae824b5bbee718662b348d49ec7b52547"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae824b5bbee718662b348d49ec7b52547">&#9670;&nbsp;</a></span>queue_remove()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int queue_remove </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structqueue.html">queue</a> *&#160;</td>
-          <td class="paramname"><em>q</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#ad7f360891a1c5cd0c5bbee69e1b780e8">msg_t</a> *&#160;</td>
-          <td class="paramname"><em>msg</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ad260973d6d4971eacb61fbfa0985a593"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad260973d6d4971eacb61fbfa0985a593">&#9670;&nbsp;</a></span>queue_test()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int queue_test </td>
-          <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>cnt</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a4e2c48ed27715194fb4a7ff94cf6f122"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4e2c48ed27715194fb4a7ff94cf6f122">&#9670;&nbsp;</a></span>user_msg_recycle()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int user_msg_recycle </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="structuser__msg.html">user_msg</a> *&#160;</td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>proposal</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned long&#160;</td>
+          <td class="paramname"><em>prop_size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a85f68ea014152bfdee90b2baba64b6a6">RLO_ID</a>&#160;</td>
+          <td class="paramname"><em>my_proposal_id</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a1eb01b5ad6654228bc220140db1cd59f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1eb01b5ad6654228bc220140db1cd59f">&#9670;&nbsp;</a></span>RLO_user_msg_recycle()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int RLO_user_msg_recycle </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
+          <td class="paramname"><em>eng</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a38c31d17c9e8cdebffe6a6e90b595822">RLO_user_msg</a> *&#160;</td>
           <td class="paramname"><em>msg_in</em>&#160;</td>
         </tr>
         <tr>
@@ -2119,26 +2308,26 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>A utility function to recycle the message and free resource. @Recommend: User should always recycle a message after using it. Save the planet! </p>
+<p>A utility function to recycle the message and free resource. User should always recycle a message after using it. Save the planet! (and a memory leakage.) </p>
 
 </div>
 </div>
-<a id="a535fd49f9096cdf8d04d99cf225a438a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a535fd49f9096cdf8d04d99cf225a438a">&#9670;&nbsp;</a></span>user_pickup_next()</h2>
+<a id="a8bd143cbf2d29981fabddaa266b6fc20"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8bd143cbf2d29981fabddaa266b6fc20">&#9670;&nbsp;</a></span>RLO_user_pickup_next()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int user_pickup_next </td>
+          <td class="memname">int RLO_user_pickup_next </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#aa88f76fffaf2ce4b88bb8cfad461341f">engine_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a1741f8a5ddda63b5c85f389650c223a6">RLO_engine_t</a> *&#160;</td>
           <td class="paramname"><em>eng</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="structuser__msg.html">user_msg</a> **&#160;</td>
+          <td class="paramtype"><a class="el" href="rootless__ops_8h.html#a38c31d17c9e8cdebffe6a6e90b595822">RLO_user_msg</a> **&#160;</td>
           <td class="paramname"><em>msg_out</em>&#160;</td>
         </tr>
         <tr>
@@ -2148,18 +2337,32 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>All received messages are picked up by this function, give one output at a time. User should keep calling it until return 0 so to get all messages in the mailbox. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>All received messages are picked up by this function, give one output at a time. User should keep calling it until return 0 so to get all messages in the mailbox. Assuming the msg will be copied and stay safe, and will be unlinked from pickup_queue. The user should free msg_out when it's done by calling user_msg_recycle(). </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">eng</td><td>the progress engine used </td></tr>
     <tr><td class="paramname">msg_out</td><td>output parameter, gives the next available message in the mailbox. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>: 1 if there are still messages left, 0 if no more messages available. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>1 if there are still messages left, 0 if no more messages available. @NOTE: if this function is called in a thread different from the <a class="el" href="structprogress__engine.html">progress_engine</a> thread, there will be a thread safe issue. </dd></dl>
 
 </div>
 </div>
 <h2 class="groupheader">Variable Documentation</h2>
+<a id="a89de2a20e0b9aa5aa36df7cdf33daf3a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a89de2a20e0b9aa5aa36df7cdf33daf3a">&#9670;&nbsp;</a></span>Active_Engines</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_engine_manager.html">EngineManager</a>* Active_Engines</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a5dc54cf4131d05d0e9e3d5648b4b1f40"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5dc54cf4131d05d0e9e3d5648b4b1f40">&#9670;&nbsp;</a></span>DEBUG_MODE</h2>
 

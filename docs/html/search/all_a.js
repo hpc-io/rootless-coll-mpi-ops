@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['job_5fdone',['JOB_DONE',['../rootless__ops_8h.html#a79cf93cdd02e55b7834032e5c1999aeda8cefc70cabd1cdbf227263d409d9aeca',1,'rootless_ops.h']]]
+  ['last_5fwall',['last_wall',['../struct_b_cast_communicator.html#ad424448b20484fafc7daa26ee58920e2',1,'BCastCommunicator::last_wall()'],['../rootless__ops_8c.html#a26dce570559aeaebe53eb58d63cad00e',1,'last_wall():&#160;rootless_ops.c']]],
+  ['log',['Log',['../struct_log.html',1,'']]],
+  ['log_5ffile',['log_file',['../struct_log.html#ab936051f5aaca44c6c3c41dee0d19c36',1,'Log']]]
 ];

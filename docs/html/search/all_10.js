@@ -1,17 +1,11 @@
 var searchData=
 [
-  ['readme',['README',['../md___users_tonglin_nersc_dev_sync_rootless__r_e_a_d_m_e.html',1,'']]],
-  ['readme_2emd',['README.md',['../_r_e_a_d_m_e_8md.html',1,'']]],
-  ['recv_5fproposal_5ffrom',['recv_proposal_from',['../struct_proposal__state.html#a6dabeb8e2eb25dd1aea55131a766c570',1,'Proposal_state']]],
-  ['recved_5fbcast_5fcnt',['recved_bcast_cnt',['../structprogress__engine.html#acc456a00462ef5060bbe0be911897b83',1,'progress_engine']]],
-  ['ref_5fcnt',['ref_cnt',['../structmsg__generic.html#ad0051d544ac21062e58db70bd236c698',1,'msg_generic']]],
-  ['req',['req',['../structisend__state.html#a8f93de79770fb73624c0ddbb25d7db4c',1,'isend_state']]],
-  ['req_5fid',['req_id',['../structbcomm__token__t.html#a3a1d383106d76db9fc2953004a11ddb1',1,'bcomm_token_t']]],
-  ['req_5fstat',['req_stat',['../structbcomm__token__t.html#a0562a56a3ba152fa4b1063956bed5c5a',1,'bcomm_token_t::req_stat()'],['../struct_b_cast_communicator.html#a345edb84d701c10e238d6857a8679b89',1,'BCastCommunicator::req_stat()'],['../rootless__ops_8h.html#a558434a4e0b889047c84ac066ba26d1b',1,'Req_stat():&#160;rootless_ops.h']]],
-  ['req_5fstatus',['REQ_STATUS',['../rootless__ops_8h.html#a61940a61851e50228e5cb763214ed8a5',1,'rootless_ops.h']]],
-  ['rma_5fmailbag_5fget',['rma_mailbag_get',['../rma__util_8c.html#af5559a9f43714fbc477c35f63afaf3a6',1,'rma_util.c']]],
-  ['rma_5fmailbag_5fput',['rma_mailbag_put',['../rma__util_8c.html#a44d9c69dfaef3021e66315641563a537',1,'rma_util.c']]],
-  ['rma_5futil_2ec',['rma_util.c',['../rma__util_8c.html',1,'']]],
-  ['rootless_5fops_2ec',['rootless_ops.c',['../rootless__ops_8c.html',1,'']]],
-  ['rootless_5fops_2eh',['rootless_ops.h',['../rootless__ops_8h.html',1,'']]]
+  ['send_5fchannel_5fcnt',['send_channel_cnt',['../struct_b_cast_communicator.html#a6bf19610928a5bdd90825bb5cdfe4c89',1,'BCastCommunicator']]],
+  ['send_5fcnt',['send_cnt',['../struct_r_l_o__msg__generic.html#a31009911c3163f72ef6b45389fd9bde6',1,'RLO_msg_generic']]],
+  ['send_5flist',['send_list',['../struct_b_cast_communicator.html#a25ebb555cb926fa86727d9e989e27b42',1,'BCastCommunicator']]],
+  ['send_5flist_5flen',['send_list_len',['../struct_b_cast_communicator.html#a088ac6b14e315ab38923f7f4b02a2eb6',1,'BCastCommunicator']]],
+  ['send_5ftype',['send_type',['../struct_r_l_o__msg__generic.html#aca941377606a642e99841cd26ea79714',1,'RLO_msg_generic']]],
+  ['sent_5fbcast_5fcnt',['sent_bcast_cnt',['../structprogress__engine.html#a63d4af0843f2821638e4145f0a41f7dc',1,'progress_engine']]],
+  ['stat',['stat',['../structisend__state.html#af78ff1d3f710ef0e15a0b30ed6ce72d4',1,'isend_state']]],
+  ['state',['state',['../struct_proposal__state.html#aeae6436a94f9207a342f6d99af378adc',1,'Proposal_state']]]
 ];
