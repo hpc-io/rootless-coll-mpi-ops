@@ -79,13 +79,13 @@ int test_gen_bcast(int buf_size, int root_rank, int cnt){
             sprintf(buf, "msg_No.%d", i);
             RLO_msg_t* send_msg = RLO_msg_new_bc(eng, buf, strlen(buf));
             RLO_bcast_gen(eng, send_msg, RLO_BCAST);
-            RLO_make_progress_all();
+            RLO_make_progress();
             recv_msg = NULL;
         }
     } else {//recv
         do{
             recv_msg = NULL;
-            RLO_make_progress_all();
+            RLO_make_progress();
             RLO_user_msg* pickup_out = NULL;
             while(RLO_user_pickup_next(eng, &pickup_out)){
                 recved_cnt++;
@@ -131,16 +131,28 @@ int test_concurrent_iar_single_proposal(MPI_Comm comm, int starter, int no_rank,
          if(ret > -1 && ret2 > -1){//done
              result = RLO_get_vote_my_proposal(eng);
              result2 = RLO_get_vote_my_proposal(eng2);
-             printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
+             printf("\n Both engines got results for proposal: %s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
          }else{//sample application logic loop
-             while(RLO_check_proposal_state(eng, 0) != RLO_COMPLETED || RLO_check_proposal_state(eng2, 0) != RLO_COMPLETED){
-                 //make_progress_all();
-                 RLO_make_progress_all();
+             RLO_Req_stat s1 = RLO_check_my_proposal_state(eng, starter);
+             RLO_Req_stat s2 = RLO_check_my_proposal_state(eng2, starter);
+             while(s1 != RLO_COMPLETED || s2!= RLO_COMPLETED){
+                 RLO_make_progress();
+                 s1 = RLO_check_my_proposal_state(eng, starter);
+                 s2 = RLO_check_my_proposal_state(eng2, starter);
+                 printf("\n %s:%u - rank = %03d: check proposal: s1 = %d, s2 = %d\n", __func__, __LINE__, my_rank, s1, s2);
              }
+//             while(RLO_check_my_proposal_state(eng, starter) != RLO_COMPLETED || RLO_check_my_proposal_state(eng2, starter) != RLO_COMPLETED){
+//                 //make_progress_all();
+//                 RLO_make_progress();
+//             }
              result = RLO_get_vote_my_proposal(eng);
              result2 = RLO_get_vote_my_proposal(eng2);
          }
-        printf("%s:%u - rank = %03d: proposal completed, result1 = %d, result2 = %d \n", __func__, __LINE__, my_rank, result, result2);
+
+         //if(RLO_check_my_proposal_state(eng, 0) == RLO_COMPLETED)
+             printf("E1: %s:%u - rank = %03d: check proposal: result1 = %d, state = %d\n", __func__, __LINE__, my_rank, result, RLO_check_my_proposal_state(eng, starter));
+         //if(RLO_check_my_proposal_state(eng2, 0) == RLO_COMPLETED)
+             printf("E2: %s:%u - rank = %03d: check proposal: result2 = %d, state = %d\n", __func__, __LINE__, my_rank, result2, RLO_check_my_proposal_state(eng2, starter));
 
         pass = (result == agree);
         pass2 = (result2 == agree);
@@ -160,7 +172,7 @@ int test_concurrent_iar_single_proposal(MPI_Comm comm, int starter, int no_rank,
         int tag_recv2 = -1;
         int decision_cnt = 0;
         do {
-            RLO_make_progress_all();
+            RLO_make_progress();
             RLO_user_msg* pickup_out = NULL;
             while(RLO_user_pickup_next(eng, &pickup_out)){
                 //printf("%s:%u - rank = %03d: pickup_out = %p\n", __func__, __LINE__, my_rank, pickup_out);
@@ -171,26 +183,26 @@ int test_concurrent_iar_single_proposal(MPI_Comm comm, int starter, int no_rank,
                 tag_recv = pickup_out->type;
                 switch (tag_recv) {//pickup_out->irecv_stat.MPI_TAG
                     case RLO_IAR_PROPOSAL: //2
-                        printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out->pid, pickup_out->data);
+                        printf("E1: Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out->pid, pickup_out->data);
                         break;
                     case RLO_IAR_VOTE: //3
-                        printf("Rank %d: Received vote: %d:%d.\n", my_rank, pickup_out->pid, pickup_out->vote);
+                        printf("E1: Rank %d: Received vote: %d:%d.\n", my_rank, pickup_out->pid, pickup_out->vote);
                         break;
                     case RLO_IAR_DECISION: //4
                         decision_cnt++;
-                        printf("Rank %d: Engine %d: Received decision: %d:%d\n", my_rank, RLO_get_engine_id(eng), pickup_out->pid, pickup_out->vote);
+                        printf("E1: Rank %d: Engine %d: Received decision: %d:%d\n", my_rank, RLO_get_engine_id(eng), pickup_out->pid, pickup_out->vote);
                         pass = (pickup_out->vote == agree);
                         break;
 
                     default:
-                        printf("Warning: Rank %d: Received unexpected msg, tag = %d.\n", my_rank, tag_recv);
+                        printf("E1: Warning: Rank %d: Received unexpected msg, tag = %d.\n", my_rank, tag_recv);
                         break;
                 }
                 RLO_user_msg_recycle(eng, pickup_out);
                 pickup_out = NULL;
             }
 
-            RLO_make_progress_all();
+            RLO_make_progress();
             RLO_user_msg* pickup_out2 = NULL;
             while(RLO_user_pickup_next(eng2, &pickup_out2)){
                 //printf("%s:%u - rank = %03d: pickup_out = %p\n", __func__, __LINE__, my_rank, pickup_out);
@@ -201,29 +213,29 @@ int test_concurrent_iar_single_proposal(MPI_Comm comm, int starter, int no_rank,
                 tag_recv2 = pickup_out2->type;
                 switch (tag_recv2) {//pickup_out->irecv_stat.MPI_TAG
                     case RLO_IAR_PROPOSAL: //2
-                        printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out2->pid, pickup_out2->data);
+                        printf("E2: Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out2->pid, pickup_out2->data);
                         break;
                     case RLO_IAR_VOTE: //3
-                        printf("Rank %d: Received vote: %d:%d.\n", my_rank, pickup_out2->pid, pickup_out2->vote);
+                        printf("E2: Rank %d: Received vote: %d:%d.\n", my_rank, pickup_out2->pid, pickup_out2->vote);
                         break;
                     case RLO_IAR_DECISION: //4
                         decision_cnt++;
-                        printf("Rank %d: Engine %d: Received decision: %d:%d\n", my_rank, RLO_get_engine_id(eng2), pickup_out2->pid, pickup_out2->vote);
+                        printf("E2: Rank %d: Engine %d: Received decision: %d:%d\n", my_rank, RLO_get_engine_id(eng2), pickup_out2->pid, pickup_out2->vote);
                         pass2 = (pickup_out2->vote == agree);
                         break;
 
                     default:
-                        printf("Warning: Rank %d: Received unexpected msg, tag = %d.\n", my_rank, tag_recv2);
+                        printf("E2: Warning: Rank %d: Received unexpected msg, tag = %d.\n", my_rank, tag_recv2);
                         break;
                 }
-                RLO_user_msg_recycle(eng, pickup_out2);
+                RLO_user_msg_recycle(eng2, pickup_out2);
                 pickup_out2 = NULL;
             }
         } while (tag_recv != RLO_IAR_DECISION && tag_recv2 != RLO_IAR_DECISION);
     }
 
     if(my_rank == starter) {
-            printf("\n\n Starter: rank %d: =========== decision: Proposal result1 = %d, result2 = %d =========== \n\n", starter, result, result2);
+        printf("\n\n Starter: rank %d: =========== decision: Proposal result1 = %d, result2 = %d =========== \n\n", starter, result, result2);
     }
 
     MPI_Comm my_comm = RLO_get_my_comm(eng);
@@ -263,9 +275,9 @@ int test_IAllReduce_single_proposal(MPI_Comm comm, int starter, int no_rank, int
              result = RLO_get_vote_my_proposal(eng);
              printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
          }else{//sample application logic loop
-             while(RLO_check_proposal_state(eng, 0) != RLO_COMPLETED){
+             while(RLO_check_my_proposal_state(eng, 0) != RLO_COMPLETED){
                  //make_progress_all();
-                 RLO_make_progress_all();
+                 RLO_make_progress();
              }
              result = RLO_get_vote_my_proposal(eng);
          }
@@ -282,10 +294,11 @@ int test_IAllReduce_single_proposal(MPI_Comm comm, int starter, int no_rank, int
             }
         } else {
           isp.my_proposal = "";
+          //printf("strlen(my_proposal) = %lu\n", strlen(isp.my_proposal));
         }
         int tag_recv = -1;
         do {
-            RLO_make_progress_all();
+            RLO_make_progress();
             RLO_user_msg* pickup_out = NULL;
             usleep(300);
             while(RLO_user_pickup_next(eng, &pickup_out)){
@@ -297,7 +310,7 @@ int test_IAllReduce_single_proposal(MPI_Comm comm, int starter, int no_rank, int
                 tag_recv = pickup_out->type;
                 switch (tag_recv) {//pickup_out->irecv_stat.MPI_TAG
                     case RLO_IAR_PROPOSAL: //2
-                        printf("Rank %d: Received proposal: %d:%s.\n", my_rank, pickup_out->pid, pickup_out->data);
+                        printf("Rank %d: Received proposal: %d:[%s].\n", my_rank, pickup_out->pid, pickup_out->data);
                         break;
                     case RLO_IAR_VOTE: //3
                         printf("Rank %d: Received vote: %d:%d.\n", my_rank, pickup_out->pid, pickup_out->vote);
@@ -339,19 +352,23 @@ int testcase_iar_single_multiComm(){
 }
 
 int testcase_iar_concurrent_single_proposal(){
-    test_concurrent_iar_single_proposal(MPI_COMM_WORLD, 1, 2, 0);
-    test_concurrent_iar_single_proposal(MPI_COMM_WORLD, 1, 2, 1);
+    int proposer = 1;
+    int opponent = 2;//says no
+    test_concurrent_iar_single_proposal(MPI_COMM_WORLD, proposer, opponent, 0);
+    test_concurrent_iar_single_proposal(MPI_COMM_WORLD, proposer, opponent, 1);
     return 0;
 }
 
 int testcase_iar_concurrent_multiple_proposal(){
     test_concurrent_iar_multi_proposal(MPI_COMM_WORLD, 1, 3, 1);
+    if(RLO_get_my_rank() == 0)
+        printf("\n\n 2nd test started... \n\n");
     test_concurrent_iar_multi_proposal(MPI_COMM_WORLD, 1, 3, 0);
     return 0;
 }
 //Test case utility, used ONLY by a rank that has submitted a proposal.
 int util_testcase_decision_receiver(RLO_engine_t* eng, int decision_needed){
-    RLO_make_progress_all();
+    RLO_make_progress();
     int my_rank = RLO_get_my_rank();
     int cnt_yes = 0;
     int cnt_no = 0;
@@ -359,9 +376,9 @@ int util_testcase_decision_receiver(RLO_engine_t* eng, int decision_needed){
     int decision_cnt = 0;
     int tag_recv = -1;
     while (decision_cnt < decision_needed) {
-        RLO_make_progress_all();
+        RLO_make_progress();
         while (RLO_user_pickup_next(eng, &pickup_out)) {
-            RLO_make_progress_all();
+            RLO_make_progress();
             //printf("%s:%u - rank = %03d: pickup_out = %p\n", __func__, __LINE__, my_rank, pickup_out);
             //PBuf* pbuf = malloc(sizeof(PBuf));
             //pbuf_deserialize(pickup_out->data_buf, pbuf);
@@ -427,12 +444,12 @@ int test_iar_multi_proposal(MPI_Comm comm, int active_1, int active_2_mod, int a
          if(ret > -1){//done
              result = RLO_get_vote_my_proposal(eng);
          }else{//sample application logic loop
-             while(RLO_check_proposal_state(eng, 0) != RLO_COMPLETED){
-                 RLO_make_progress_all();
+             while(RLO_check_my_proposal_state(eng, 0) != RLO_COMPLETED){
+                 RLO_make_progress();
              }
              result = RLO_get_vote_my_proposal(eng);
 
-             RLO_make_progress_all();
+             RLO_make_progress();
              pass = (util_testcase_decision_receiver(eng, decision_needed - 1) == decision_needed - 1);
          }
     } else if (my_rank % active_2_mod == 0) {
@@ -452,12 +469,12 @@ int test_iar_multi_proposal(MPI_Comm comm, int active_1, int active_2_mod, int a
         if (ret > -1) { //done
             result = RLO_get_vote_my_proposal(eng);
         } else { //sample application logic loop
-            while (RLO_check_proposal_state(eng, 0) != RLO_COMPLETED) {
-                RLO_make_progress_all();
+            while (RLO_check_my_proposal_state(eng, 0) != RLO_COMPLETED) {
+                RLO_make_progress();
             }
             result = RLO_get_vote_my_proposal(eng);
 
-            RLO_make_progress_all();
+            RLO_make_progress();
             pass = (util_testcase_decision_receiver(eng, decision_needed - 1) == decision_needed - 1);
         }//eld else: ret <= -1.
     } else {//all passive ranks
@@ -467,7 +484,7 @@ int test_iar_multi_proposal(MPI_Comm comm, int active_1, int active_2_mod, int a
             isp.my_proposal = "111";
         }
 
-        RLO_make_progress_all();
+        RLO_make_progress();
         pass = (util_testcase_decision_receiver(eng, decision_needed) == decision_needed);
     }
 
@@ -517,13 +534,13 @@ int test_concurrent_iar_multi_proposal(MPI_Comm comm, int active_1, int active_2
              result = RLO_get_vote_my_proposal(eng);
              result2 = RLO_get_vote_my_proposal(eng2);
          }else{//sample application logic loop
-             while(RLO_check_proposal_state(eng, 0) != RLO_COMPLETED || RLO_check_proposal_state(eng2, 0) != RLO_COMPLETED){
-                 RLO_make_progress_all();
+             while(RLO_check_my_proposal_state(eng, 0) != RLO_COMPLETED || RLO_check_my_proposal_state(eng2, 0) != RLO_COMPLETED){
+                 RLO_make_progress();
              }
              result = RLO_get_vote_my_proposal(eng);
              result2 = RLO_get_vote_my_proposal(eng2);
 
-             RLO_make_progress_all();
+             RLO_make_progress();
              pass = (util_testcase_decision_receiver(eng, decision_needed - 1) == decision_needed - 1);
              pass2 = (util_testcase_decision_receiver(eng2, decision_needed - 1) == decision_needed - 1);
          }
@@ -547,13 +564,13 @@ int test_concurrent_iar_multi_proposal(MPI_Comm comm, int active_1, int active_2
             result = RLO_get_vote_my_proposal(eng);
             result2 = RLO_get_vote_my_proposal(eng2);
         }else{//sample application logic loop
-            while(RLO_check_proposal_state(eng, 0) != RLO_COMPLETED || RLO_check_proposal_state(eng2, 0) != RLO_COMPLETED){
-                RLO_make_progress_all();
+            while(RLO_check_my_proposal_state(eng, 0) != RLO_COMPLETED || RLO_check_my_proposal_state(eng2, 0) != RLO_COMPLETED){
+                RLO_make_progress();
             }
             result = RLO_get_vote_my_proposal(eng);
             result2 = RLO_get_vote_my_proposal(eng2);
 
-            RLO_make_progress_all();
+            RLO_make_progress();
             pass = (util_testcase_decision_receiver(eng, decision_needed - 1) == decision_needed - 1);
             pass2 = (util_testcase_decision_receiver(eng2, decision_needed - 1) == decision_needed - 1);
         }
@@ -565,7 +582,7 @@ int test_concurrent_iar_multi_proposal(MPI_Comm comm, int active_1, int active_2
             isp.my_proposal = "111";
         }
 
-        RLO_make_progress_all();
+        RLO_make_progress();
         pass = (util_testcase_decision_receiver(eng, decision_needed) == decision_needed);
         pass2 = (util_testcase_decision_receiver(eng2, decision_needed) == decision_needed);
     }
@@ -665,7 +682,7 @@ int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
     RLO_user_msg* pickup_out = NULL;
 
     while (bcast_sent_cnt < msg_cnt) {
-        RLO_make_progress_all();
+        RLO_make_progress();
 
         while(RLO_user_pickup_next(eng, &pickup_out)){
             recv_msg_cnt++;
@@ -749,19 +766,21 @@ int main(int argc, char** argv) {
 
     printf("%s:%u - rank = %03d, pid = %d\n", __func__, __LINE__, my_rank, getpid());
 
-//   sleep(30);
+   //sleep(30);
     // ======================== Basic bcast test ========================
-//    int init_rank = atoi(argv[1]);
-//    int op_cnt = atoi(argv[2]);
-//    test_gen_bcast(my_bcomm, MSG_SIZE_MAX, init_rank, op_cnt);
+    //test_gen_bcast(RLO_MSG_SIZE_MAX, 1, 1000);
 
-    // ======================== All-to-all bcast test: Hackysacking ========================
-    //testcase_iar_single_multiComm();
+    // ======================== All-to-all complex bcast test: Hackysacking ========================
     //test_wrapper_hackysacking(3, 100);
-    testcase_iar_concurrent_single_proposal();
+
+    // ======================== IAll_Reduce tests ========================
+
+    //testcase_iar_single_multiComm();
+
+    //testcase_iar_concurrent_single_proposal();
     //testcase_iar_concurrent_multiple_proposal();
-    //test_concurrent_iar_multi_proposal(MPI_COMM_WORLD, 1, 3, 1);
-//    test_gen_bcast(MSG_SIZE_MAX, 1, 10);
+    test_concurrent_iar_multi_proposal(MPI_COMM_WORLD, 1, 3, 1);
+
 //    test_wrapper_bcast(2);
 ////
 //    int init_rank = atoi(argv[1]);

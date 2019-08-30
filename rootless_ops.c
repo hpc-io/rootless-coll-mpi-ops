@@ -64,11 +64,12 @@ int queue_remove(queue* q, RLO_msg_t* msg);
 typedef struct Proposal_buf{
     RLO_ID pid;
     RLO_Vote vote;//0 = vote NO, 1 = vote yes, -1 = proposal, -2 = decision.
+    RLO_time_stamp time_stamp;
     size_t data_len;
     char* data;
 }PBuf;
 
-int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, size_t data_len_in, char* data_in, char* buf_out, size_t* buf_len_out);
+int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, RLO_time_stamp time_stamp, size_t data_len_in, char* data_in, char* buf_out, size_t* buf_len_out);
 void pbuf_free(PBuf* pbuf);
 int pbuf_deserialize(char* buf_in, PBuf* pbuf_out);
 
@@ -210,6 +211,7 @@ struct progress_engine {
 
     queue queue_iar_pending; //store received proposal msgs
 
+    queue queue_delivery; //store things to deliver, such as approved proposals.
 //    bcomm_GEN_msg_t
 //        *rcv_q_head,
 //        *rcv_q_tail; // Used by BC, proposal, vote, decision
@@ -254,8 +256,6 @@ struct progress_engine {
 
 int msg_wait(RLO_engine_t* eng, RLO_msg_t* msg_in);
 
-int make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out);
-
 int _test_ircecv_completed(RLO_engine_t* eng, RLO_msg_t* msg_buf);
 
 //int _gen_bc_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
@@ -292,6 +292,7 @@ RLO_msg_t* RLO_msg_new_generic(RLO_engine_t* eng) {
     new_msg->msg_usr.pid = -1;
     new_msg->msg_usr.type = -1;
     new_msg->msg_usr.vote = -1;
+    new_msg->msg_usr.time_stamp = 0;
     new_msg->data_buf = new_msg->msg_usr.buf + sizeof(int);
     new_msg->bc_isend_reqs = calloc(eng->my_bcomm->send_list_len, sizeof(MPI_Request));
     new_msg->bc_isend_stats = calloc(eng->my_bcomm->send_list_len, sizeof(MPI_Status));
@@ -535,20 +536,20 @@ void progress_engine_free(RLO_engine_t* eng){
 }
 //Turn the gear. Output a handle(recv_msgs_out ) to the received msg, for sampling purpose only. User should use pickup_next() to get msg.
 
-int RLO_make_progress_all() {
+int RLO_make_progress() {
     assert(Active_Engines);
     RLO_engine_t* e = Active_Engines->head;
     if(!e)
         return -1;
 
     while(e){
-        make_progress_gen(e, NULL);
+        RLO_make_progress_gen(e, NULL);
         e = e->next;
     }
     return 0;
 }
 
-int make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out) {
+int RLO_make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out) {
 
     //========================== My active proposal state update==========================
     if(eng->my_own_proposal.state != RLO_COMPLETED && eng->my_own_proposal.state != RLO_INVALID){// if I have an active proposal
@@ -696,25 +697,27 @@ int _iar_proposal_handler(RLO_engine_t* eng, RLO_msg_t* recv_msg_buf_in) {
     }
 
     int judgment = (eng->prop_judgement_cb)(pbuf->data, eng->app_ctx);//received proposal and my proposal
-    //printf("%s:%u - rank = %03d, prop_judgement_cb() = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, judgment);
+    printf("%s:%u - rank = %03d, received proposal, pid = %d, prop_judgement_cb() = %d\n",
+            __func__, __LINE__, eng->my_bcomm->my_rank, pbuf->pid, judgment);
     switch (judgment) {
-        case 0: {    //others' declined
+        case 0: {    // decline received proposal
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
             //queue_append(&(eng->queue_iar_pending), recv_msg_buf_in);
             _vote_back(eng, new_prop_state, 0);
             //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
             break;
         }
-        case 1: {    // others' win. is mine declined?
+        case 1: {    // Approve received proposal, others' win. either mine is empty or declined?
                 //Add msg to queue_iar_pending in _bc_forward().
 
             int fwd_cnt = fwd_send_cnt(eng->my_bcomm, origin, recv_msg_buf_in->irecv_stat.MPI_SOURCE);
 //            printf("%s:%u - rank = %03d: eng->queue_iar_pending.head = %p, queueing a proposal: %p, fwd_cnt = %d\n",
 //                    __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_iar_pending.head, recv_msg_buf_in, fwd_cnt);
 
-            if (_bc_forward(eng, recv_msg_buf_in) == 0) {//no need to fwd.
+            if (_bc_forward(eng, recv_msg_buf_in) == 0) {//leaf node, no need to fwd.
                 _vote_back(eng, new_prop_state, 1);
             }
+            //else: non-leaf node, wait for children's votes.
             break;
         }
         default:
@@ -731,7 +734,7 @@ int _vote_back(RLO_engine_t* eng, RLO_proposal_state* ps, RLO_Vote vote){
     char send_buf[RLO_MSG_SIZE_MAX+1] = "";
 
     memcpy(send_buf, &(eng->my_bcomm->my_rank), sizeof(int));
-    pbuf_serialize(ps->pid, vote, 0, NULL, send_buf + sizeof(int), &send_len);
+    pbuf_serialize(ps->pid, vote, 0, 0, NULL, send_buf + sizeof(int), &send_len);
     MPI_Send(send_buf, eng->my_bcomm->msg_size_max + 1, MPI_CHAR, ps->recv_proposal_from,
             RLO_IAR_VOTE, eng->my_bcomm->my_comm);
 //    MPI_Request req;
@@ -824,34 +827,42 @@ int _iar_decision_handler(RLO_engine_t* eng, RLO_msg_t* msg_buf_in) {
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     //I don't have this proposal, but received a decision about it. (could only be 0)
     // Don't need to forward, but need pickup.
-    if(!proposal_msg){
+    if(!proposal_msg){//not found.
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         queue_append(&(eng->queue_pickup), msg_buf_in);
         return -1;
     }
 
     if(decision_buf->vote == 0){//proposal canceled
+        //no need to append to pickup_q, since pickup is for app use only.
         //printf("%s:%u - rank = %03d: received decision: proposal canceled: pid = %d \n", __func__, __LINE__, eng->my_bcomm->my_rank, decision_buf->pid);
         queue_remove(&(eng->queue_iar_pending), proposal_msg);
 
         RLO_msg_free(proposal_msg);
 
-    } else {
+    } else {//proposal approved
         //execute proposal: a callback function
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         (eng->proposal_action)(proposal_msg->data_buf, eng->app_ctx);
 
         proposal_msg->prop_state->state = RLO_COMPLETED;
-        queue_remove(&(eng->queue_iar_pending), proposal_msg);
 
-        RLO_msg_free(proposal_msg);
+        queue_remove(&(eng->queue_iar_pending), proposal_msg);
+        proposal_msg->fwd_done = 1;
+        proposal_msg->pickup_done = 0;
+        proposal_msg->prop_state->vote = 1;
+        proposal_msg->prop_state->state = RLO_COMPLETED;
+
+        //DO NOT change this line: this is meant to change user msg type to decision, since irecv_stat.MPI_TAG is used to set usr_msg->type.
+        proposal_msg->irecv_stat.MPI_TAG = msg_buf_in->irecv_stat.MPI_TAG;
+        queue_append(&(eng->queue_pickup), proposal_msg);
+        //RLO_msg_free(proposal_msg);
         //done using proposal msg.
-        //printf("%s:%u - rank = %03d: proposal approved: pid = %d \n", __func__, __LINE__, eng->my_bcomm->my_rank, decision_buf->pid);
     }
 
     //give user a notification
-    msg_buf_in->fwd_done = 1;//set for so pickup queue can free it eventually.
-    queue_append(&(eng->queue_pickup), msg_buf_in);
+    //msg_buf_in->fwd_done = 1;//set for so pickup queue can free it eventually.
+    //queue_append(&(eng->queue_pickup), msg_buf_in);
 
     pbuf_free(decision_buf);
 
@@ -859,15 +870,15 @@ int _iar_decision_handler(RLO_engine_t* eng, RLO_msg_t* msg_buf_in) {
 }
 
 int proposal_succeeded(RLO_engine_t* eng){
-    RLO_make_progress_all();
+    RLO_make_progress();
 
     return (eng->my_own_proposal.votes_needed == eng->my_own_proposal.votes_recved
             && eng->my_own_proposal.vote != 0);
     //succeed, fail, incomplete
 }
 
-int RLO_check_proposal_state(RLO_engine_t* eng, int pid){
-    RLO_make_progress_all();
+int RLO_check_my_proposal_state(RLO_engine_t* eng, int pid){
+    RLO_make_progress();
     return eng->my_own_proposal.state;
 }
 
@@ -884,8 +895,8 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, unsigned long prop_si
 
     char proposal_send_buf[RLO_MSG_SIZE_MAX] = "";
     size_t buf_len;
-
-    if(0 != pbuf_serialize(my_proposal_id, 1, prop_size, proposal, proposal_send_buf, &buf_len)) {
+    RLO_time_stamp time = RLO_get_time_usec();
+    if(0 != pbuf_serialize(my_proposal_id, 1, time, prop_size, proposal, proposal_send_buf, &buf_len)) {
         printf("pbuf_serialize failed.\n");
         return -1;
     }
@@ -897,7 +908,7 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, unsigned long prop_si
 
     RLO_bcast_gen(eng, proposal_msg, RLO_IAR_PROPOSAL);
 
-    RLO_make_progress_all();
+    RLO_make_progress();
 
     if(eng->my_own_proposal.state == RLO_COMPLETED)
         return eng->my_own_proposal.vote;//result
@@ -907,10 +918,16 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, unsigned long prop_si
 
 int _iar_decision_bcast(RLO_engine_t* eng, RLO_ID my_proposal_id, RLO_Vote decision){
     size_t send_len = 0;
-    char decision_send_buf[64] = "";
+    char decision_send_buf[128] = "";
     char debug_info[16] = "IAR_DEC";
-    pbuf_serialize(my_proposal_id, decision, strlen(debug_info), debug_info, decision_send_buf, &send_len);
-    RLO_msg_t* decision_msg = RLO_msg_new_bc(eng, decision_send_buf, 64);
+    printf("%s:%u - rank = %03d: packing decision: pid = %d, decision = %d \n", __func__, __LINE__,
+            eng->my_bcomm->my_rank, my_proposal_id, decision);
+    pbuf_serialize(my_proposal_id, decision, 0, strlen(debug_info), debug_info, decision_send_buf, &send_len);
+    PBuf* b = calloc(1, sizeof(PBuf));
+    pbuf_deserialize(decision_send_buf, b);
+    printf("%s:%u - rank = %03d: checking decision pack: pid = %d, decision = %d \n", __func__, __LINE__,
+            eng->my_bcomm->my_rank, b->pid, b->vote);
+    RLO_msg_t* decision_msg = RLO_msg_new_bc(eng, decision_send_buf, 128);
     RLO_bcast_gen(eng, decision_msg, RLO_IAR_DECISION);
     eng->my_own_proposal.decision_msg = decision_msg;
     return -1;
@@ -925,8 +942,9 @@ RLO_user_msg* _user_msg_mock(RLO_msg_t* gen_msg_in){
     if(msg_out->type == RLO_IAR_DECISION){
         msg_out->pid = *((RLO_ID*)(gen_msg_in->data_buf));
         msg_out->vote = *((RLO_Vote*)((gen_msg_in->data_buf) + sizeof(RLO_ID)));
-        msg_out->data_len =  *((size_t*)((gen_msg_in->data_buf) + sizeof(RLO_ID) + sizeof(RLO_Vote)));
-        msg_out->data = gen_msg_in->data_buf + sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(size_t);
+        msg_out->time_stamp = *((RLO_Vote*)((gen_msg_in->data_buf) + sizeof(RLO_ID)) + sizeof(RLO_time_stamp));
+        msg_out->data_len =  *((size_t*)((gen_msg_in->data_buf) + sizeof(RLO_ID) + sizeof(RLO_Vote)) + sizeof(RLO_time_stamp));
+        msg_out->data = gen_msg_in->data_buf + sizeof(RLO_ID) + sizeof(RLO_Vote) + + sizeof(RLO_time_stamp) + sizeof(size_t);
     }
     return msg_out;
 }
@@ -1366,7 +1384,7 @@ int proposalPools_reset(RLO_proposal_state* pools) {
 }
 
 //TODO: using offsetof(sth) and pointers with complex MPI data types avoid memcpy from user buf;
-int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, size_t data_len_in, char* data_in,
+int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, RLO_time_stamp time_stamp, size_t data_len_in, char* data_in,
         char* buf_out, size_t* buf_len_out) {
     assert(buf_out);//assume it's allocated or is a fixed-size array.
 
@@ -1380,14 +1398,16 @@ int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, size_t data_len_in, char* data_
 
     *((RLO_ID*)buf_out) = pid_in;
     *((RLO_Vote*)(buf_out + sizeof(RLO_ID))) = vote;
-    *((size_t*)(buf_out + sizeof(RLO_ID) + sizeof(RLO_Vote))) = data_len_in;
+    *((size_t*)(buf_out + sizeof(RLO_ID) + sizeof(RLO_Vote))) = time_stamp;
+    *((size_t*)(buf_out + sizeof(RLO_ID) + sizeof(RLO_Vote)) + sizeof(RLO_time_stamp)) = data_len_in;
 
     if(data_len_in != 0){
-        memcpy(buf_out + sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(size_t), data_in, data_len_in);
+        memcpy(buf_out + sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(RLO_time_stamp) + sizeof(size_t), data_in, data_len_in);
     }
     if(buf_len_out) {
         *buf_len_out = sizeof(RLO_ID)  /* SN */
             + sizeof(RLO_Vote)          /* vote/decision */
+            + sizeof(RLO_time_stamp)    /* Time stamp */
             + sizeof(size_t)  /* data_len */
             + data_len_in;          /* data */
     }
@@ -1404,8 +1424,9 @@ int pbuf_deserialize(char* buf_in, PBuf* pbuf_out) {
         return -1;
     pbuf_out->pid = *((RLO_ID*)buf_in);
     pbuf_out->vote = *((RLO_Vote*)(buf_in + sizeof(RLO_ID)));
-    pbuf_out->data_len = *((size_t*)(buf_in + sizeof(RLO_ID) + sizeof(RLO_Vote)));
-    pbuf_out->data = buf_in + sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(size_t);
+    pbuf_out->time_stamp = *((RLO_Vote*)(buf_in + sizeof(RLO_ID)) + sizeof(RLO_Vote));
+    pbuf_out->data_len = *((size_t*)(buf_in + sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(RLO_time_stamp)));
+    pbuf_out->data = buf_in + sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(RLO_time_stamp) + sizeof(size_t);
     return 0;
 }
 
@@ -1599,7 +1620,7 @@ int RLO_bcast_gen(RLO_engine_t* eng, RLO_msg_t* msg_in, enum RLO_COMM_TAGS tag) 
     /* Update # of outstanding messages being sent for bcomm */
     my_bcomm->bcast_send_cnt = my_bcomm->send_list_len;
     my_bcomm->my_bcast_cnt++;
-    RLO_make_progress_all();
+    RLO_make_progress();
     return 0;
 }
 
@@ -1615,13 +1636,13 @@ int RLO_progress_engine_cleanup(RLO_engine_t* eng){
     do {
         MPI_Test(&req, &done, &stat_out1);// test for MPI_Iallreduce.
         if (!done) {
-            RLO_make_progress_all();
+            RLO_make_progress();
         }
     } while (!done);
 
     // Core cleanup section
     while (eng->recved_bcast_cnt + eng->sent_bcast_cnt < total_bcast) {
-        RLO_make_progress_all();
+        RLO_make_progress();
     }
     recv_msg = NULL;
     RLO_user_msg* pickup_out = NULL;
@@ -1668,7 +1689,7 @@ int RLO_get_vote_my_proposal(RLO_engine_t* eng){
         return -1;
     }
     int ret = eng->my_own_proposal.vote;
-    RLO_proposal_reset(&(eng->my_own_proposal));
+    //RLO_proposal_reset(&(eng->my_own_proposal));
     return ret;
 }
 

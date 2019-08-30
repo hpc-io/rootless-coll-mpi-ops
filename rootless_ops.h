@@ -61,7 +61,7 @@ enum RLO_COMM_TAGS {//Used as MPI_TAG. Class 1
 };
 
 typedef enum REQ_STATUS {
-    RLO_COMPLETED,
+    RLO_COMPLETED,//voted and decision made, either yes or no.
     RLO_IN_PROGRESS,
     RLO_FAILED,
     RLO_INVALID // default.
@@ -80,12 +80,14 @@ typedef struct progress_engine RLO_engine_t;
 
 typedef struct RLO_msg_generic RLO_msg_t;
 typedef struct Proposal_state RLO_proposal_state;
+typedef unsigned long RLO_time_stamp;
 
 typedef struct user_msg{
     char buf[RLO_MSG_SIZE_MAX + sizeof(int)];
     int type;
     RLO_ID pid;
     RLO_Vote vote;//0 = vote NO, 1 = vote yes, -1 = proposal, -2 = decision.
+    RLO_time_stamp time_stamp;
     size_t data_len;
     char* data;
 } RLO_user_msg;
@@ -106,7 +108,7 @@ struct RLO_msg_generic{
     enum RLO_COMM_TAGS send_type;
 
     /**
-     * filled when repost irecv
+     * filled when repost irecv`
      */
     MPI_Request irecv_req;
     MPI_Status irecv_stat;
@@ -161,8 +163,8 @@ RLO_msg_t* RLO_msg_new_generic(RLO_engine_t* eng);
 /**
  *  Prepare a message for bcast.
  * @param eng: the progress engine used
- * @buf_in: the data buffer that will be bcasted.
- * @send_size: send buffer size
+ * @param buf_in: the data buffer that will be bcasted.
+ * @param send_size: send buffer size
  * @return a message pointer
  */
 RLO_msg_t* RLO_msg_new_bc(RLO_engine_t* eng, void* buf_in, int send_size);
@@ -193,7 +195,11 @@ int RLO_progress_engine_cleanup(RLO_engine_t* eng);
  * @param eng: the progress engine used
  * @param msg_out: output message, only used to sample a message, for debugging purpose.
  */
-int RLO_make_progress_all();
+int RLO_make_progress();
+
+//make progreee with ONE engine
+int RLO_make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out);
+
 int RLO_get_engine_id(RLO_engine_t* eng);
 MPI_Comm RLO_get_my_comm(RLO_engine_t* eng);
 /**
@@ -230,7 +236,7 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, size_t prop_size, RLO
 /*
  * Check if a proposal is done voting.
  */
-int RLO_check_proposal_state(RLO_engine_t* eng, int pid);
+int RLO_check_my_proposal_state(RLO_engine_t* eng, int pid);
 
 /**
  * Get current status/voting results of my own proposal
@@ -243,6 +249,7 @@ int RLO_get_vote_my_proposal(RLO_engine_t* eng);
  */
 int RLO_proposal_reset(RLO_proposal_state* ps);
 
+int RLO_checkout_proposal(void* proposal_out);
 // Utility functions
 unsigned long RLO_get_time_usec();
 void RLO_get_time_str(char *str_out);
