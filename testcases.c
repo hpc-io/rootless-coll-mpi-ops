@@ -6,7 +6,7 @@
  */
 
 #include "rootless_ops.h"
-
+#define DEBUG_PRINT printf("%s:%u, pid = %d\n", __func__, __LINE__, getpid());
 //Toy callback functions for proposal judging and approval.
 int is_proposal_approved_cb(const void *buf, void *app_data);
 int proposal_action_cb(const void *buf, void *app_data);
@@ -662,7 +662,10 @@ int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
     unsigned long phase_1;
     int bcast_sent_cnt;
     int recv_msg_cnt = 0;
-    char buf_send[32] = "";
+    //char buf_send[32] = "";
+    int buf_size = 32;
+    char* buf_send = calloc(1, buf_size);
+
     /* Get pointer to sending buffer */
     total_pickup = 0;
     time_start = RLO_get_time_usec();
@@ -675,7 +678,7 @@ int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
     sprintf(buf_send, "%d", next_rank);
 
     /* Broadcast message */
-    RLO_msg_t* prev_rank_bc_msg = RLO_msg_new_bc(eng, buf_send, sizeof(buf_send));
+    RLO_msg_t* prev_rank_bc_msg = RLO_msg_new_bc(eng, buf_send, strlen(buf_send) + 1);
     RLO_bcast_gen(eng, prev_rank_bc_msg, RLO_BCAST);
     usleep(100);
     bcast_sent_cnt = 0;
@@ -685,6 +688,7 @@ int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
         RLO_make_progress();
 
         while(RLO_user_pickup_next(eng, &pickup_out)){
+            assert(pickup_out);
             recv_msg_cnt++;
             total_pickup++;
             int recv_rank = atoi((pickup_out->data));
@@ -694,7 +698,7 @@ int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
                 char buf[32] = "";
                 next_rank = get_next_rank(my_rank, world_size);
                 sprintf(buf, "%d", next_rank);
-                RLO_msg_t* next_msg_send = RLO_msg_new_bc(eng, buf, sizeof(buf));
+                RLO_msg_t* next_msg_send = RLO_msg_new_bc(eng, buf, buf_size);
                 RLO_bcast_gen(eng, next_msg_send, RLO_BCAST);
                 bcast_sent_cnt++;
             }
@@ -709,7 +713,7 @@ int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
     unsigned int pass = (total_pickup == expected_pickup);
     printf("Rank %02d reports: Hacky sack done passive bcast %d times. total pickup %d times. expected pickup = %d, pass = %d\n", my_rank,
             bcast_sent_cnt,  total_pickup, expected_pickup, pass);
-
+    free(buf_send);
     return pass;
 }
 
@@ -756,6 +760,28 @@ int test_wrapper_hackysacking(int cnt_round, int cnt_msg){
     return aggregate_test_result(comm, pass, "Hackysack");
 }
 
+int pbuf_test(){
+    void* proposal_send_buf = NULL;//calloc(1, RLO_MSG_SIZE_MAX);
+    size_t buf_len;
+    RLO_time_stamp time = RLO_get_time_usec();
+    char* proposal = "test proposal";
+    int my_proposal_id = 10;
+    if(0 != pbuf_serialize(my_proposal_id, 1, time, strlen(proposal), (void*)proposal, &proposal_send_buf, &buf_len)) {
+        printf("pbuf_serialize failed.\n");
+        return -1;
+    }
+
+    PBuf* s = pbuf_new_local(my_proposal_id, 1, time, strlen(proposal), (void*)proposal);
+
+    pbuf_debug(s, proposal_send_buf);
+    DEBUG_PRINT
+    PBuf* tmp = NULL;
+    pbuf_deserialize(proposal_send_buf , &tmp);
+    printf("%s: - %d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
+            __func__, __LINE__, tmp->pid, my_proposal_id, tmp->data_len, strlen(proposal));
+    return 0;
+}
+
 int main(int argc, char** argv) {
     time_t t;
     srand((unsigned) time(&t) + getpid());
@@ -765,6 +791,12 @@ int main(int argc, char** argv) {
     int my_rank = RLO_get_my_rank();
 
     printf("%s:%u - rank = %03d, pid = %d\n", __func__, __LINE__, my_rank, getpid());
+
+    if(argc > 1){
+        int sleep_time = atoi(argv[1]);
+        printf("Waiting %d sec for gdb to attach....pid = %d\n", sleep_time, getpid());
+        sleep(sleep_time);
+    }
 
    //sleep(30);
     // ======================== Basic bcast test ========================
@@ -776,7 +808,7 @@ int main(int argc, char** argv) {
     // ======================== IAll_Reduce tests ========================
 
     //testcase_iar_single_multiComm();
-
+    //pbuf_test();
     //testcase_iar_concurrent_single_proposal();
     //testcase_iar_concurrent_multiple_proposal();
     test_concurrent_iar_multi_proposal(MPI_COMM_WORLD, 1, 3, 1);

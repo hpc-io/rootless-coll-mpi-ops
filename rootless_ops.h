@@ -96,6 +96,7 @@ struct RLO_msg_generic{
     //char buf[MSG_SIZE_MAX + sizeof(int)];// Make this always be the first field, so a pointer to it is the same as a pointer to the message struct
     RLO_user_msg msg_usr;
     char* data_buf; //= buf + sizeof(int), so data_buf size is MSG_SIZE_MAX
+    //size_t msg_data_len;
     int id_debug;
     /**
      * Only support BCAST, IAR_PROPOSAL for now, set this when the msg is in app pickup queue.
@@ -254,6 +255,24 @@ int RLO_checkout_proposal(void* proposal_out);
 unsigned long RLO_get_time_usec();
 void RLO_get_time_str(char *str_out);
 int RLO_get_my_rank();
+int RLO_get_eng_rank(RLO_engine_t* eng);
 int RLO_get_world_size();
+
+// Message package protocol and functions
+typedef struct Proposal_buf{
+    RLO_ID pid;
+    RLO_Vote vote;//0 = vote NO, 1 = vote yes, -1 = proposal, -2 = decision.
+    RLO_time_stamp time_stamp;
+    size_t data_len;
+    char* data;
+}PBuf;
+
+// Exposing interface below for debugging purpose only.
+PBuf* pbuf_new_local(RLO_ID pid_in, RLO_Vote vote, RLO_time_stamp time_stamp, size_t data_len_in, void* data_in);
+int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, RLO_time_stamp time_stamp, size_t data_len_in, void* data_in, void** buf_out, size_t* buf_len_out);
+int pbuf_vote_serialize(int my_rank, RLO_ID pid_in, RLO_Vote vote, void** buf_out, size_t* buf_len_out);
+int pbuf_deserialize(void* buf_in, PBuf** pbuf_out);
+void pbuf_free(PBuf* pbuf);
+void pbuf_debug(PBuf* p, void* serialized_buf_in);
 
 #endif /* ROOTLESS_OPS_H_ */
