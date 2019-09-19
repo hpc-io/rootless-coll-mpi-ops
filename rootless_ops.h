@@ -184,7 +184,8 @@ int RLO_msg_test_isends(RLO_engine_t* eng, RLO_msg_t* msg_in);
  * @param app_ctx: user defined application context, used along with above callback function. Set it to NULL if not using IAllReduce.
  * @param app_proposal_action: user defined callback function, used in IAllReduce. Set it to NULL if not using IAllReduce.
  */
-RLO_engine_t* RLO_progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max, void* approv_cb_func, void* app_ctx, void* app_proposal_action);
+RLO_engine_t* RLO_progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max,
+    int (*approv_cb_func)(), void* app_ctx, void* app_proposal_action);
 
 /**
  * Tear down an engine. It will free all resource used in eng.
