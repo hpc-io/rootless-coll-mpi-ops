@@ -766,12 +766,12 @@ int pbuf_test(){
     RLO_time_stamp time = RLO_get_time_usec();
     char* proposal = "test proposal";
     int my_proposal_id = 10;
-    if(0 != pbuf_serialize(my_proposal_id, 1, time, strlen(proposal), (void*)proposal, &proposal_send_buf, &buf_len)) {
+    if(0 != pbuf_serialize(my_proposal_id, 1, time, strlen(proposal)+1, (void*)proposal, &proposal_send_buf, &buf_len)) {
         printf("pbuf_serialize failed.\n");
         return -1;
     }
 
-    PBuf* s = pbuf_new_local(my_proposal_id, 1, time, strlen(proposal), (void*)proposal);
+    PBuf* s = pbuf_new_local(my_proposal_id, 1, time, strlen(proposal)+1, (void*)proposal);
 
     pbuf_debug(s, proposal_send_buf);
     DEBUG_PRINT
@@ -779,6 +779,8 @@ int pbuf_test(){
     pbuf_deserialize(proposal_send_buf , &tmp);
     printf("%s: - %d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
             __func__, __LINE__, tmp->pid, my_proposal_id, tmp->data_len, strlen(proposal));
+    pbuf_free(tmp);
+    free(proposal_send_buf);
     return 0;
 }
 
@@ -803,7 +805,7 @@ int main(int argc, char** argv) {
     //test_gen_bcast(RLO_MSG_SIZE_MAX, 1, 1000);
 
     // ======================== All-to-all complex bcast test: Hackysacking ========================
-    //test_wrapper_hackysacking(3, 100);
+    test_wrapper_hackysacking(3, 100);
 
     // ======================== IAll_Reduce tests ========================
 
@@ -811,7 +813,7 @@ int main(int argc, char** argv) {
     //pbuf_test();
     //testcase_iar_concurrent_single_proposal();
     //testcase_iar_concurrent_multiple_proposal();
-    test_concurrent_iar_multi_proposal(MPI_COMM_WORLD, 1, 3, 1);
+    //test_concurrent_iar_multi_proposal(MPI_COMM_WORLD, 1, 3, 1);
 
 //    test_wrapper_bcast(2);
 ////

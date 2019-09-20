@@ -848,7 +848,7 @@ int _iar_decision_handler(RLO_engine_t* eng, RLO_msg_t* msg_buf_in) {
     PBuf* decision_buf = NULL;//malloc(sizeof(PBuf));
     pbuf_deserialize(msg_buf_in->data_buf, &decision_buf);
     //printf("%s: %d: rank = %03d, received a decision: %p = [%d:%d], prop_state = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg_buf_in, decision_buf->pid, decision_buf->vote, msg_buf_in->prop_state);
-
+    printf("%s:%u - rank = %03d: received a decision! pid = %d, vote = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, decision_buf->pid, decision_buf->vote);
     RLO_msg_t* proposal_msg = _find_proposal_msg(eng, decision_buf->pid);
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     //I don't have this proposal, but received a decision about it. (could only be 0)
@@ -925,6 +925,8 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, unsigned long prop_si
     eng->my_own_proposal.votes_recved = 0;
     eng->my_own_proposal.decision_msg = NULL;
 
+    eng->my_proposal = proposal;//used in _iar_vote_handler() for self judgment.
+
     void* proposal_send_buf = NULL;//calloc(1, RLO_MSG_SIZE_MAX);
     size_t buf_len;
     RLO_time_stamp time = RLO_get_time_usec();
@@ -933,10 +935,10 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, unsigned long prop_si
         return -1;
     }
 
-    PBuf* tmp = NULL;//calloc(1, sizeof(PBuf));
-    pbuf_deserialize(proposal_send_buf , &tmp);
-    printf("%s:%u - rank = %03d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
-            __func__, __LINE__, eng->my_bcomm->my_rank, tmp->pid, my_proposal_id, tmp->data_len, prop_size);
+//    PBuf* tmp = NULL;//calloc(1, sizeof(PBuf));
+//    pbuf_deserialize(proposal_send_buf , &tmp);
+//    printf("%s:%u - rank = %03d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
+//            __func__, __LINE__, eng->my_bcomm->my_rank, tmp->pid, my_proposal_id, tmp->data_len, prop_size);
 
     RLO_msg_t* proposal_msg = RLO_msg_new_bc(eng, proposal_send_buf, buf_len);
 
@@ -1011,7 +1013,7 @@ int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
     assert(eng);
     RLO_msg_t* msg = eng->queue_wait_and_pickup.head;
     if (msg) {        //wait_and_pickup empty
-
+        DEBUG_PRINT
         while (msg) {
             RLO_msg_t* msg_t = msg->next;
 
@@ -1032,18 +1034,25 @@ int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
     msg = eng->queue_pickup.head;
 
     if (!(eng->queue_pickup.head)) {
+        DEBUG_PRINT
         return 0;
     } else { //not empty, find the first available in queue_pickup
+        printf("%s:%u - rank = %03d, pickup_queue_cnt = %d\n",
+                __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_pickup.msg_cnt);
         while (msg) {
             RLO_msg_t* msg_t = msg->next;
-
+            DEBUG_PRINT
             if (!msg->pickup_done) { //return a msg
                 queue_remove(&(eng->queue_pickup), msg);
-
+                printf("%s:%u - rank = %03d, return a message = %d\n",
+                        __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_pickup.msg_cnt);
                 // mark pickup_done and free the msg in user_msg_done()
                 *msg_out = _user_msg_mock(msg);
+                printf("%s:%u - rank = %03d, return a message for pickup, pid = %d\n",
+                        __func__, __LINE__, eng->my_bcomm->my_rank, (*msg_out)->pid);
                 return 1;
             }
+
             msg = msg_t; // next
         }
     }
