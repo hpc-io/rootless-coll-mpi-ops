@@ -470,7 +470,7 @@ int engine_remove(EngineManager* q, RLO_engine_t* eng){
     q->engine_cnt--;
     return ret;
 }
-RLO_engine_t* RLO_progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max, void* approv_cb_func, void* app_ctx, void* app_proposal_action){
+RLO_engine_t* RLO_progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max, int (*approv_cb_func)(), void* app_ctx, void* app_proposal_action){
     RLO_engine_t* eng = calloc(1, sizeof(RLO_engine_t));
     DEBUG_PRINT
     eng->my_bcomm = bcomm_init(mpi_comm, msg_size_max);
