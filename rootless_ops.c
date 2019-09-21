@@ -601,7 +601,7 @@ int RLO_make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out) {
                 }
 
                 case RLO_IAR_PROPOSAL: {
-                    DEBUG_PRINT
+                    //DEBUG_PRINT
                     //processed by a callback function, not visible to the users
                     //do not increase eng->recved_bcast_cnt
                     _iar_proposal_handler(eng, cur_bc_rcv_buf);
@@ -609,7 +609,7 @@ int RLO_make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out) {
                 }
 
                 case RLO_IAR_VOTE: {
-                    DEBUG_PRINT
+                    //DEBUG_PRINT
 //                    PBuf* t = NULL;
 //                    pbuf_deserialize(cur_bc_rcv_buf, &t);
 //                    pbuf_free(t);
@@ -619,7 +619,7 @@ int RLO_make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out) {
 
                 case RLO_IAR_DECISION: {
                     eng->recved_bcast_cnt++;
-                    DEBUG_PRINT
+                    //DEBUG_PRINT
                     // remove corresponding proposal state
                     int ret = _iar_decision_handler(eng, cur_bc_rcv_buf);
                     //assert(ret != -1); NO need of this: if a proposal was denied here, the local won't store it for later checking.
@@ -873,7 +873,7 @@ int _iar_decision_handler(RLO_engine_t* eng, RLO_msg_t* msg_buf_in) {
         //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
         if(eng->proposal_action)
             (eng->proposal_action)(proposal_msg->data_buf, eng->app_ctx);
-        DEBUG_PRINT
+
         proposal_msg->prop_state->state = RLO_COMPLETED;
 
         queue_remove(&(eng->queue_iar_pending), proposal_msg);
@@ -1013,7 +1013,7 @@ int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
     assert(eng);
     RLO_msg_t* msg = eng->queue_wait_and_pickup.head;
     if (msg) {        //wait_and_pickup empty
-        DEBUG_PRINT
+        //DEBUG_PRINT
         while (msg) {
             RLO_msg_t* msg_t = msg->next;
 
@@ -1034,22 +1034,21 @@ int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
     msg = eng->queue_pickup.head;
 
     if (!(eng->queue_pickup.head)) {
-        DEBUG_PRINT
+        //DEBUG_PRINT
         return 0;
     } else { //not empty, find the first available in queue_pickup
-        printf("%s:%u - rank = %03d, pickup_queue_cnt = %d\n",
-                __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_pickup.msg_cnt);
+//        printf("%s:%u - rank = %03d, pickup_queue_cnt = %d\n",
+//                __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_pickup.msg_cnt);
         while (msg) {
             RLO_msg_t* msg_t = msg->next;
-            DEBUG_PRINT
             if (!msg->pickup_done) { //return a msg
                 queue_remove(&(eng->queue_pickup), msg);
-                printf("%s:%u - rank = %03d, return a message = %d\n",
-                        __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_pickup.msg_cnt);
+//                printf("%s:%u - rank = %03d, return a message = %d\n",
+//                        __func__, __LINE__, eng->my_bcomm->my_rank, eng->queue_pickup.msg_cnt);
                 // mark pickup_done and free the msg in user_msg_done()
                 *msg_out = _user_msg_mock(msg);
-                printf("%s:%u - rank = %03d, return a message for pickup, pid = %d\n",
-                        __func__, __LINE__, eng->my_bcomm->my_rank, (*msg_out)->pid);
+//                printf("%s:%u - rank = %03d, return a message for pickup, pid = %d\n",
+//                        __func__, __LINE__, eng->my_bcomm->my_rank, (*msg_out)->pid);
                 return 1;
             }
 
@@ -1839,9 +1838,9 @@ int RLO_progress_engine_cleanup(RLO_engine_t* eng){
     }
     bcomm_free(eng->my_bcomm);
 
-    printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
+    //printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
     engine_remove(Active_Engines, eng);
-    printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
+    //printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
     progress_engine_free(eng);
     return 0;
 }
