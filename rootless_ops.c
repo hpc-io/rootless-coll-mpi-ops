@@ -30,7 +30,7 @@
 #define PROPOSAL_POOL_SIZE 16 //maximal concurrent proposal supported
 #define ISEND_CONCURRENT_MAX 128 //maximal number of concurrent and unfinished isend, used to set MPI_Request and MPI_State arrays for MPI_Waitall().
 
-#define DEBUG_PRINT printf("%s:%u, process_id = %d\n", __func__, __LINE__, getpid());
+#define DEBUG_PRINT  //printf("%s:%u, process_id = %d\n", __func__, __LINE__, getpid());
 
 typedef struct EngineManager {
     RLO_engine_t* head;
@@ -522,7 +522,7 @@ RLO_engine_t* RLO_progress_engine_new(MPI_Comm mpi_comm, size_t msg_size_max, in
     engine_append(Active_Engines, eng);
     Active_Engines->_eng_ever_created++;
     eng->engine_id = Active_Engines->_eng_ever_created;
-    printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
+    //printf("%s:%u, pid = %d, engine_cnt = %d, engine_id = %d\n", __func__, __LINE__, getpid(), Active_Engines->engine_cnt, eng->engine_id);
     return eng;
 }
 
@@ -570,8 +570,10 @@ int RLO_make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out) {
                 DEBUG_PRINT
                 eng->my_own_proposal.state = RLO_COMPLETED;
                 //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
-                RLO_msg_free(eng->my_own_proposal.decision_msg);
-                eng->my_own_proposal.decision_msg = NULL; //freed after pickup.
+                if(!(eng->my_own_proposal.decision_msg->prev) && !(eng->my_own_proposal.decision_msg->next)){
+                    RLO_msg_free(eng->my_own_proposal.decision_msg);
+                    eng->my_own_proposal.decision_msg = NULL; //freed after pickup.
+                }
             }
         }
     }
@@ -848,7 +850,7 @@ int _iar_decision_handler(RLO_engine_t* eng, RLO_msg_t* msg_buf_in) {
     PBuf* decision_buf = NULL;//malloc(sizeof(PBuf));
     pbuf_deserialize(msg_buf_in->data_buf, &decision_buf);
     //printf("%s: %d: rank = %03d, received a decision: %p = [%d:%d], prop_state = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, msg_buf_in, decision_buf->pid, decision_buf->vote, msg_buf_in->prop_state);
-    printf("%s:%u - rank = %03d: received a decision! pid = %d, vote = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, decision_buf->pid, decision_buf->vote);
+    //printf("%s:%u - rank = %03d: received a decision! pid = %d, vote = %d\n", __func__, __LINE__, eng->my_bcomm->my_rank, decision_buf->pid, decision_buf->vote);
     RLO_msg_t* proposal_msg = _find_proposal_msg(eng, decision_buf->pid);
     //printf("%s:%u - rank = %03d\n", __func__, __LINE__, eng->my_bcomm->my_rank);
     //I don't have this proposal, but received a decision about it. (could only be 0)
@@ -959,13 +961,13 @@ int _iar_decision_bcast(RLO_engine_t* eng, RLO_ID my_proposal_id, RLO_Vote decis
     size_t send_len = 0;
     void* decision_send_buf = NULL;
     char*  debug_info = "IAR_DEC";
-    printf("%s:%u - rank = %03d: packing decision: pid = %d, decision = %d \n", __func__, __LINE__,
-            eng->my_bcomm->my_rank, my_proposal_id, decision);
+    //printf("%s:%u - rank = %03d: packing decision: pid = %d, decision = %d \n", __func__, __LINE__,
+    //        eng->my_bcomm->my_rank, my_proposal_id, decision);
     pbuf_serialize(my_proposal_id, decision, 0, strlen(debug_info) + 1, debug_info, &decision_send_buf, &send_len);
     PBuf* b = NULL;//calloc(1, sizeof(PBuf));
     pbuf_deserialize(decision_send_buf, &b);
-    printf("%s:%u - rank = %03d: checking decision pack: pid = %d, decision = %d \n", __func__, __LINE__,
-            eng->my_bcomm->my_rank, b->pid, b->vote);
+    //printf("%s:%u - rank = %03d: checking decision pack: pid = %d, decision = %d \n", __func__, __LINE__,
+    //        eng->my_bcomm->my_rank, b->pid, b->vote);
     RLO_msg_t* decision_msg = RLO_msg_new_bc(eng, decision_send_buf, 128);
     RLO_bcast_gen(eng, decision_msg, RLO_IAR_DECISION);
     eng->my_own_proposal.decision_msg = decision_msg;
@@ -1338,9 +1340,9 @@ int proposalPool_proposal_add(RLO_proposal_state* pools, RLO_proposal_state* pp_
     int i = 0;
     for(i = 0; i <= PROPOSAL_POOL_SIZE - 1; i++) {//exists, merge
         if(pools[i].pid == pp_in->pid) {
-            printf("Function %s:%u - find proposal, pid = %d , index = %d\n", __func__, __LINE__, pp_in->pid, i);
+            //printf("Function %s:%u - find proposal, pid = %d , index = %d\n", __func__, __LINE__, pp_in->pid, i);
             pools[i] = *pp_in;
-            printf("Function %s:%u - confirm in array, pid = %d , index = %d\n", __func__, __LINE__, pools[i].pid, i);
+            //printf("Function %s:%u - confirm in array, pid = %d , index = %d\n", __func__, __LINE__, pools[i].pid, i);
             return i;
         }
     }
@@ -1385,7 +1387,7 @@ int proposalPool_vote_merge(RLO_proposal_state* pools, RLO_ID k, RLO_Vote v, int
             pools[i].votes_recved++;
             pools[i].vote &= v;
             *p_index_out = i;
-            printf("%s:%u - recived votes cnt = %d, needed = %d\n", __func__, __LINE__, pools[i].votes_recved, pools[i].votes_needed);
+            //printf("%s:%u - recived votes cnt = %d, needed = %d\n", __func__, __LINE__, pools[i].votes_recved, pools[i].votes_needed);
             if(pools[i].votes_recved == pools[i].votes_needed){//votes done
                 return 1;
             } else
@@ -1486,8 +1488,8 @@ int pbuf_vote_serialize(int my_rank, RLO_ID pid_in, RLO_Vote vote, void** buf_ou
 int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, RLO_time_stamp time_stamp, size_t data_len_in, void* data_in,
         void** buf_out, size_t* buf_len_out) {
     size_t total = sizeof(RLO_ID) + sizeof(RLO_Vote)+ sizeof(RLO_time_stamp)+ sizeof(size_t) + data_len_in;
-    printf("%s:%d: pid = %d, vote = %d, time = %lu, data_len = %lu, total_len = %lu\n",
-            __func__, __LINE__, pid_in, vote, time_stamp, data_len_in, total);
+    //printf("%s:%d: pid = %d, vote = %d, time = %lu, data_len = %lu, total_len = %lu\n",
+    //        __func__, __LINE__, pid_in, vote, time_stamp, data_len_in, total);
     if(!(*buf_out))
         *buf_out = calloc(1, total);
 
@@ -1790,7 +1792,8 @@ int RLO_bcast_gen(RLO_engine_t* eng, RLO_msg_t* msg_in, enum RLO_COMM_TAGS tag) 
     }
 
     msg_in->send_type = tag;
-    queue_append(&(eng->queue_wait), msg_in);
+    if(tag != RLO_IAR_DECISION)//I take care my decision msg, no need of queue.
+        queue_append(&(eng->queue_wait), msg_in);
 
     if(tag != RLO_IAR_PROPOSAL){
         eng->sent_bcast_cnt++;
