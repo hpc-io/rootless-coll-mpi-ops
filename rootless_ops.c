@@ -943,11 +943,12 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, unsigned long prop_si
         printf("pbuf_serialize failed.\n");
         return -1;
     }
-
-//    PBuf* tmp = NULL;//calloc(1, sizeof(PBuf));
-//    pbuf_deserialize(proposal_send_buf , &tmp);
-//    printf("%s:%u - rank = %03d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
-//            __func__, __LINE__, eng->my_bcomm->my_rank, tmp->pid, my_proposal_id, tmp->data_len, prop_size);
+    printf("%s:%u - rank = %d: pid = %d, prop_size = %lu, \n",
+            __func__, __LINE__, eng->my_bcomm->my_rank, my_proposal_id, prop_size);
+    PBuf* tmp = NULL;//calloc(1, sizeof(PBuf));
+    pbuf_deserialize(proposal_send_buf , &tmp);
+    printf("%s:%u - rank = %03d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
+            __func__, __LINE__, eng->my_bcomm->my_rank, tmp->pid, my_proposal_id, tmp->data_len, prop_size);
 
     RLO_msg_t* proposal_msg = RLO_msg_new_bc(eng, proposal_send_buf, buf_len);
 
@@ -1005,25 +1006,21 @@ RLO_user_msg* _user_msg_mock(RLO_msg_t* gen_msg_in){
         msg_out->vote = b->vote;
         msg_out->time_stamp = b->time_stamp;
         msg_out->data_len = b->data_len;
-        msg_out->data = gen_msg_in->data_buf + sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(RLO_time_stamp) + sizeof(size_t);
-        printf("%s:%u,: pid = %d, vote = %d, time = %lu, len = %lu\n",  __func__, __LINE__, b->pid, b->vote, b->time_stamp, b->data_len);
+        msg_out->data = gen_msg_in->data_buf;  //sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(RLO_time_stamp) + sizeof(size_t);
+        printf("%s:%u,: based on gen_msg_in->data_buf: pid = %d, vote = %d, time = %lu, len = %lu\n",  __func__, __LINE__, b->pid, b->vote, b->time_stamp, b->data_len);
         pbuf_free(b);
         //b->data;
         // TODO: don't free here right now as b->data is needed outside, but need to be cleared out.
         //printf("%s:%u, pid = %d, after assignment: timestamp = %lu, data = [%s], len = %zu\n", __func__, __LINE__, msg_out->pid, msg_out->time_stamp, msg_out->data, msg_out->data_len);
     }else if(msg_out->type == RLO_BCAST){
         //DEBUG_PRINT
-        //PBuf* b = NULL;//calloc(1, sizeof(PBuf));
+        PBuf* b = NULL;//calloc(1, sizeof(PBuf));
         void* buf = (char*)(gen_msg_in->data_buf) + sizeof(size_t);
-        printf("%s:%u,: buf offset = %lu, msg_usr.data_len = %lu, data = [%s]\n",  __func__, __LINE__, *(size_t*)(gen_msg_in->data_buf),gen_msg_in->msg_usr.data_len, buf);
-//        pbuf_deserialize(buf, &b);//b->data is just a pointer that points to a propo_buf from original proposal.
-//        msg_out->pid = b->pid;
-//        msg_out->vote = b->vote;
-//        msg_out->time_stamp = b->time_stamp;
-//        msg_out->data_len = b->data_len;
-//        msg_out->data = gen_msg_in->data_buf + sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(RLO_time_stamp) + sizeof(size_t);
-//        //printf("%s:%u,: pid = %d, vote = %d, time = %lu, len = %lu\n",  __func__, __LINE__, msg_out->pid, msg_out->vote, msg_out->time_stamp, msg_out->data_len);
-//        pbuf_free(b);
+        //printf("%s:%u,: buf offset = %lu, msg_usr.data_len = %lu, data = [%s]\n",  __func__, __LINE__, *(size_t*)(gen_msg_in->data_buf),gen_msg_in->msg_usr.data_len, buf);
+        pbuf_deserialize(buf, &b);//b->data is just a pointer that points to a propo_buf from original proposal.
+        msg_out->data = gen_msg_in->data_buf;
+        printf("%s:%u: checking b: pid = %d, vote = %d, time = %lu, len = %lu\n",  __func__, __LINE__, b->pid, b->vote, b->time_stamp, b->data_len);
+        pbuf_free(b);
     }
 
     return msg_out;
@@ -1033,6 +1030,7 @@ RLO_user_msg* _user_msg_mock(RLO_msg_t* gen_msg_in){
 // Assuming the msg will be copied and stay safe, and will be unlinked from pickup_queue.
 // The user should free msg_out when it's done.
 // NOTE: if this function is called in a thread different from the progress_engine thread, there will be a thread safe issue.
+
 int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
     assert(eng);
     RLO_msg_t* msg = eng->queue_wait_and_pickup.head;
@@ -1049,6 +1047,11 @@ int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
                 //        __func__, __LINE__, eng->my_bcomm->my_rank, msg->send_type, msg->irecv_stat.MPI_TAG);
                 *msg_out = _user_msg_mock(msg);
 
+                PBuf* b = NULL;//calloc(1, sizeof(PBuf));
+                        pbuf_deserialize((char*)((*msg_out)->data) + sizeof(size_t), &b);
+                        printf("%s:%u, my_rank = %d, b.pid = %d, b.data_len = %lu, should be a proposal_buf size.\n",
+                                __func__, __LINE__, eng->my_bcomm->my_rank, b->pid, b->data_len);
+                        pbuf_free(b);
                 return 1;
             }
             msg = msg_t;
@@ -1071,9 +1074,14 @@ int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
                 //printf("%s:%u - rank = %d, send_type = %d, MPI_TAG = %d\n",
                 //        __func__, __LINE__, eng->my_bcomm->my_rank, msg->send_type, msg->irecv_stat.MPI_TAG);
                 // mark pickup_done and free the msg in user_msg_done()
-                *msg_out = _user_msg_mock(msg);
+                *msg_out = _user_msg_mock(msg);//contains a pbuf_buf
                 //printf("%s:%u - rank = %03d, return a message for pickup, pid = %d, type = %d\n",
                 //        __func__, __LINE__, eng->my_bcomm->my_rank, (*msg_out)->pid, (*msg_out)->type);
+                PBuf* b = NULL;//calloc(1, sizeof(PBuf));
+                        pbuf_deserialize((char*)((*msg_out)->data) + sizeof(size_t), &b);
+                        printf("%s:%u, my_rank = %d, b.pid = %d, b.data_len = %lu, should be a proposal_buf size.\n",
+                                __func__, __LINE__, eng->my_bcomm->my_rank, b->pid, b->data_len);
+                        pbuf_free(b);
                 return 1;
             }
 
@@ -1515,7 +1523,7 @@ int pbuf_vote_serialize(int my_rank, RLO_ID pid_in, RLO_Vote vote, void** buf_ou
 int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, RLO_time_stamp time_stamp, size_t data_len_in, void* data_in,
         void** buf_out, size_t* buf_len_out) {
     size_t total = sizeof(size_t) + sizeof(RLO_ID) + sizeof(RLO_Vote)+ sizeof(RLO_time_stamp)+ sizeof(size_t) + data_len_in;
-    printf("%s:%d: pid = %d, vote = %d, time = %lu, data_len = %lu, total_len = %lu\n",
+    printf("%s:%d: pid = %d, vote = %d, time = %lu, data_len_in = %lu, total_len = %lu\n",
             __func__, __LINE__, pid_in, vote, time_stamp, data_len_in, total);
     if(!(*buf_out))
         *buf_out = calloc(1, total);
