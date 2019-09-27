@@ -76,8 +76,8 @@ int test_gen_bcast(int buf_size, int root_rank, int cnt){
         //load data for bcast
         char buf[64] = "";
         for(int i = 0; i < cnt; i++) {
-            sprintf(buf, "msg_No.%d", i);
-            RLO_msg_t* send_msg = RLO_msg_new_bc(eng, buf, strlen(buf));
+            sprintf(buf, "Pretty_Long_Message_from_rank_%d_No.%d", my_rank, i);
+            RLO_msg_t* send_msg = RLO_msg_new_bc(eng, buf, strlen(buf) + 1);
             RLO_bcast_gen(eng, send_msg, RLO_BCAST);
             RLO_make_progress();
             recv_msg = NULL;
@@ -89,6 +89,8 @@ int test_gen_bcast(int buf_size, int root_rank, int cnt){
             RLO_user_msg* pickup_out = NULL;
             while(RLO_user_pickup_next(eng, &pickup_out)){
                 recved_cnt++;
+                char* str_start = (char*)(pickup_out->data) + sizeof(size_t);
+                printf("Received msg = [%s]\n", str_start);
                 RLO_user_msg_recycle(eng, pickup_out);//free it here if(fwd_done)
             }
         } while(recved_cnt < cnt);
@@ -125,8 +127,8 @@ int test_concurrent_iar_single_proposal(MPI_Comm comm, int starter, int no_rank,
         printf("%s:%u - rank = %03d\n", __func__, __LINE__, my_rank);
         isp.my_proposal = my_proposal;
         int my_proposal_id = my_rank;
-         int ret = RLO_submit_proposal(eng, my_proposal, strlen(my_proposal), my_proposal_id);
-         int ret2 = RLO_submit_proposal(eng2, my_proposal, strlen(my_proposal), my_proposal_id);
+         int ret = RLO_submit_proposal(eng, my_proposal, strlen(my_proposal) + 1, my_proposal_id);
+         int ret2 = RLO_submit_proposal(eng2, my_proposal, strlen(my_proposal) + 1, my_proposal_id);
 
          if(ret > -1 && ret2 > -1){//done
              result = RLO_get_vote_my_proposal(eng);
@@ -671,7 +673,7 @@ int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
     time_start = RLO_get_time_usec();
     int world_size = RLO_get_world_size();
     /* Compose message to send (in bcomm's send buffer) */
-    int next_rank = get_random_rank(my_rank, world_size);;
+    int next_rank = get_next_rank(my_rank, world_size);//get_random_rank(my_rank, world_size);;
             //get_random_rank(my_rank, world_size);
             //get_next_rank(my_rank, world_size);
             //get_prev_rank(my_rank, world_size);
@@ -683,22 +685,23 @@ int hacky_sack_progress_engine(MPI_Comm comm, int msg_cnt){
     usleep(100);
     bcast_sent_cnt = 0;
     RLO_user_msg* pickup_out = NULL;
-
+    //MPI_Barrier(MPI_COMM_WORLD);
     while (bcast_sent_cnt < msg_cnt) {
         RLO_make_progress();
 
         while(RLO_user_pickup_next(eng, &pickup_out)){
             assert(pickup_out);
+            printf("Hacky sacking: received msg = [%s]\n", pickup_out->data+sizeof(size_t));
             recv_msg_cnt++;
             total_pickup++;
-            int recv_rank = atoi((pickup_out->data));
+            int recv_rank = atoi((pickup_out->data+sizeof(size_t)));
             RLO_user_msg_recycle(eng, pickup_out);
-
             if(recv_rank == my_rank){
+                //MPI_Barrier(MPI_COMM_WORLD);
                 char buf[32] = "";
                 next_rank = get_next_rank(my_rank, world_size);
                 sprintf(buf, "%d", next_rank);
-                RLO_msg_t* next_msg_send = RLO_msg_new_bc(eng, buf, buf_size);
+                RLO_msg_t* next_msg_send = RLO_msg_new_bc(eng, buf, strlen(buf) + 1);
                 RLO_bcast_gen(eng, next_msg_send, RLO_BCAST);
                 bcast_sent_cnt++;
             }
@@ -802,17 +805,17 @@ int main(int argc, char** argv) {
 
    //sleep(30);
     // ======================== Basic bcast test ========================
-    //test_gen_bcast(RLO_MSG_SIZE_MAX, 1, 1000);
+    //test_gen_bcast(RLO_MSG_SIZE_MAX, 1, 1);
 
     // ======================== All-to-all complex bcast test: Hackysacking ========================
-    test_wrapper_hackysacking(3, 100);
+    //test_wrapper_hackysacking(3, 1);
 
     // ======================== IAll_Reduce tests ========================
 
-    //testcase_iar_single_multiComm();
+    testcase_iar_single_multiComm();
     //pbuf_test();
     //testcase_iar_concurrent_single_proposal();
-    //testcase_iar_concurrent_multiple_proposal();
+    //*testcase_iar_concurrent_multiple_proposal();
     //test_concurrent_iar_multi_proposal(MPI_COMM_WORLD, 1, 3, 1);
 
 //    test_wrapper_bcast(2);

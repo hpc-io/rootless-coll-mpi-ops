@@ -30,7 +30,7 @@
 #define PROPOSAL_POOL_SIZE 16 //maximal concurrent proposal supported
 #define ISEND_CONCURRENT_MAX 128 //maximal number of concurrent and unfinished isend, used to set MPI_Request and MPI_State arrays for MPI_Waitall().
 
-#define DEBUG_PRINT  printf("%s:%u, process_id = %d\n", __func__, __LINE__, getpid());
+#define DEBUG_PRINT  //printf("%s:%u, process_id = %d\n", __func__, __LINE__, getpid());
 
 typedef struct EngineManager {
     RLO_engine_t* head;
@@ -945,10 +945,11 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, unsigned long prop_si
     }
     printf("%s:%u - rank = %d: pid = %d, prop_size = %lu, \n",
             __func__, __LINE__, eng->my_bcomm->my_rank, my_proposal_id, prop_size);
-    PBuf* tmp = NULL;//calloc(1, sizeof(PBuf));
-    pbuf_deserialize(proposal_send_buf , &tmp);
-    printf("%s:%u - rank = %03d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
-            __func__, __LINE__, eng->my_bcomm->my_rank, tmp->pid, my_proposal_id, tmp->data_len, prop_size);
+//    PBuf* tmp = NULL;//calloc(1, sizeof(PBuf));
+//    pbuf_deserialize(proposal_send_buf , &tmp);
+//    printf("%s:%u - rank = %03d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
+//            __func__, __LINE__, eng->my_bcomm->my_rank, tmp->pid, my_proposal_id, tmp->data_len, prop_size);
+//    pbuf_free(tmp);
 
     RLO_msg_t* proposal_msg = RLO_msg_new_bc(eng, proposal_send_buf, buf_len);
 
@@ -1484,9 +1485,15 @@ int proposalPools_reset(RLO_proposal_state* pools) {
 //TODO: using offsetof(sth) and pointers with complex MPI data types avoid memcpy from user buf;
 
 int pbuf_vote_serialize(int my_rank, RLO_ID pid_in, RLO_Vote vote, void** buf_out, size_t* buf_len_out){
-    size_t total = sizeof(int) + sizeof(RLO_ID) + sizeof(RLO_Vote)+ sizeof(RLO_time_stamp)+ sizeof(size_t) + 0;
+    size_t total = sizeof(size_t)
+            + sizeof(int) //rank
+            + sizeof(RLO_ID) //pid
+            + sizeof(RLO_Vote) //vote
+            + sizeof(RLO_time_stamp)//time
+            + sizeof(size_t)//data_len
+            + 0; //data
 
-    size_t send_buf_size = total + sizeof(size_t);
+    //size_t send_buf_size = total + sizeof(size_t);
     size_t data_len = 0;
     RLO_time_stamp ts = 0;
 //    printf("%s:%d: pid = %d, vote = %d, time = %lu, data_len = %lu, total_len = %lu\n",
@@ -1496,7 +1503,7 @@ int pbuf_vote_serialize(int my_rank, RLO_ID pid_in, RLO_Vote vote, void** buf_ou
 
     void* cur = *buf_out;
 
-    *(size_t*)cur = send_buf_size;
+    *(size_t*)cur = total;
     cur = (char*)cur + sizeof(size_t);
 
     *(int*)cur = my_rank;
@@ -1517,7 +1524,7 @@ int pbuf_vote_serialize(int my_rank, RLO_ID pid_in, RLO_Vote vote, void** buf_ou
 
     cur = NULL;
 
-    *buf_len_out = send_buf_size;
+    *buf_len_out = total + 1;
     return 0;
 }
 int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, RLO_time_stamp time_stamp, size_t data_len_in, void* data_in,
