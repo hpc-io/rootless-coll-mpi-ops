@@ -766,12 +766,10 @@ int _vote_back(RLO_engine_t* eng, RLO_proposal_state* ps, RLO_Vote vote){
 
     pbuf_vote_serialize(eng->my_bcomm->my_rank, ps->pid, vote, &send_buf, &send_len);
     //pbuf_serialize(ps->pid, vote, ts, d_len, NULL, &(send_buf + sizeof(int)), &send_len);
-    //old send_len = eng->my_bcomm->msg_size_max + 1
-    MPI_Send(send_buf, send_len, MPI_CHAR, ps->recv_proposal_from,
-            RLO_IAR_VOTE, eng->my_bcomm->my_comm);
-//    MPI_Request req;
-//    MPI_Isend(send_buf, eng->my_bcomm->msg_size_max + 1, MPI_CHAR, ps->recv_proposal_from,
-//            IAR_VOTE, eng->my_bcomm->my_comm, &req);
+
+    MPI_Request req;
+    MPI_Isend(send_buf, send_len, MPI_CHAR, ps->recv_proposal_from,
+            RLO_IAR_VOTE, eng->my_bcomm->my_comm, &req);
 //    DEBUG_PRINT
     return send_len;
 }
