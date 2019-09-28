@@ -943,8 +943,8 @@ int RLO_submit_proposal(RLO_engine_t* eng, char* proposal, unsigned long prop_si
         printf("pbuf_serialize failed.\n");
         return -1;
     }
-    printf("%s:%u - rank = %d: pid = %d, prop_size = %lu, \n",
-            __func__, __LINE__, eng->my_bcomm->my_rank, my_proposal_id, prop_size);
+    //printf("%s:%u - rank = %d: pid = %d, prop_size = %lu, \n",
+    //        __func__, __LINE__, eng->my_bcomm->my_rank, my_proposal_id, prop_size);
 //    PBuf* tmp = NULL;//calloc(1, sizeof(PBuf));
 //    pbuf_deserialize(proposal_send_buf , &tmp);
 //    printf("%s:%u - rank = %03d: Verifying pbuf_deserialize(): tmp pid = %d, should be %d, data_len = %lu, should be %lu\n",
@@ -1008,7 +1008,7 @@ RLO_user_msg* _user_msg_mock(RLO_msg_t* gen_msg_in){
         msg_out->time_stamp = b->time_stamp;
         msg_out->data_len = b->data_len;
         msg_out->data = gen_msg_in->data_buf;  //sizeof(RLO_ID) + sizeof(RLO_Vote) + sizeof(RLO_time_stamp) + sizeof(size_t);
-        printf("%s:%u,: based on gen_msg_in->data_buf: pid = %d, vote = %d, time = %lu, len = %lu\n",  __func__, __LINE__, b->pid, b->vote, b->time_stamp, b->data_len);
+        //printf("%s:%u,: based on gen_msg_in->data_buf: pid = %d, vote = %d, time = %lu, len = %lu\n",  __func__, __LINE__, b->pid, b->vote, b->time_stamp, b->data_len);
         pbuf_free(b);
         //b->data;
         // TODO: don't free here right now as b->data is needed outside, but need to be cleared out.
@@ -1018,10 +1018,10 @@ RLO_user_msg* _user_msg_mock(RLO_msg_t* gen_msg_in){
         PBuf* b = NULL;//calloc(1, sizeof(PBuf));
         void* buf = (char*)(gen_msg_in->data_buf) + sizeof(size_t);
         //printf("%s:%u,: buf offset = %lu, msg_usr.data_len = %lu, data = [%s]\n",  __func__, __LINE__, *(size_t*)(gen_msg_in->data_buf),gen_msg_in->msg_usr.data_len, buf);
-        pbuf_deserialize(buf, &b);//b->data is just a pointer that points to a propo_buf from original proposal.
+        //pbuf_deserialize(buf, &b);//b->data is just a pointer that points to a propo_buf from original proposal.
         msg_out->data = gen_msg_in->data_buf;
-        printf("%s:%u: checking b: pid = %d, vote = %d, time = %lu, len = %lu\n",  __func__, __LINE__, b->pid, b->vote, b->time_stamp, b->data_len);
-        pbuf_free(b);
+//        printf("%s:%u: checking b: pid = %d, vote = %d, time = %lu, len = %lu\n",  __func__, __LINE__, b->pid, b->vote, b->time_stamp, b->data_len);
+        //pbuf_free(b);
     }
 
     return msg_out;
@@ -1048,11 +1048,11 @@ int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
                 //        __func__, __LINE__, eng->my_bcomm->my_rank, msg->send_type, msg->irecv_stat.MPI_TAG);
                 *msg_out = _user_msg_mock(msg);
 
-                PBuf* b = NULL;//calloc(1, sizeof(PBuf));
-                        pbuf_deserialize((char*)((*msg_out)->data) + sizeof(size_t), &b);
-                        printf("%s:%u, my_rank = %d, b.pid = %d, b.data_len = %lu, should be a proposal_buf size.\n",
-                                __func__, __LINE__, eng->my_bcomm->my_rank, b->pid, b->data_len);
-                        pbuf_free(b);
+                //PBuf* b = NULL;//calloc(1, sizeof(PBuf));
+                //pbuf_deserialize((char*)((*msg_out)->data) + sizeof(size_t), &b);
+//                        printf("%s:%u, my_rank = %d, b.pid = %d, b.data_len = %lu, should be a proposal_buf size.\n",
+//                                __func__, __LINE__, eng->my_bcomm->my_rank, b->pid, b->data_len);
+                //pbuf_free(b);
                 return 1;
             }
             msg = msg_t;
@@ -1079,10 +1079,10 @@ int RLO_user_pickup_next(RLO_engine_t* eng, RLO_user_msg** msg_out) {
                 //printf("%s:%u - rank = %03d, return a message for pickup, pid = %d, type = %d\n",
                 //        __func__, __LINE__, eng->my_bcomm->my_rank, (*msg_out)->pid, (*msg_out)->type);
                 PBuf* b = NULL;//calloc(1, sizeof(PBuf));
-                        pbuf_deserialize((char*)((*msg_out)->data) + sizeof(size_t), &b);
-                        printf("%s:%u, my_rank = %d, b.pid = %d, b.data_len = %lu, should be a proposal_buf size.\n",
-                                __func__, __LINE__, eng->my_bcomm->my_rank, b->pid, b->data_len);
-                        pbuf_free(b);
+                        //pbuf_deserialize((char*)((*msg_out)->data) + sizeof(size_t), &b);
+//                        printf("%s:%u, my_rank = %d, b.pid = %d, b.data_len = %lu, should be a proposal_buf size.\n",
+//                                __func__, __LINE__, eng->my_bcomm->my_rank, b->pid, b->data_len);
+                        //pbuf_free(b);
                 return 1;
             }
 
@@ -1530,8 +1530,8 @@ int pbuf_vote_serialize(int my_rank, RLO_ID pid_in, RLO_Vote vote, void** buf_ou
 int pbuf_serialize(RLO_ID pid_in, RLO_Vote vote, RLO_time_stamp time_stamp, size_t data_len_in, void* data_in,
         void** buf_out, size_t* buf_len_out) {
     size_t total = sizeof(size_t) + sizeof(RLO_ID) + sizeof(RLO_Vote)+ sizeof(RLO_time_stamp)+ sizeof(size_t) + data_len_in;
-    printf("%s:%d: pid = %d, vote = %d, time = %lu, data_len_in = %lu, total_len = %lu\n",
-            __func__, __LINE__, pid_in, vote, time_stamp, data_len_in, total);
+//    printf("%s:%d: pid = %d, vote = %d, time = %lu, data_len_in = %lu, total_len = %lu\n",
+//            __func__, __LINE__, pid_in, vote, time_stamp, data_len_in, total);
     if(!(*buf_out))
         *buf_out = calloc(1, total);
 
@@ -1633,8 +1633,8 @@ int pbuf_deserialize(void* buf_in, PBuf** pbuf_out) {
     int data_len = *(size_t*)buf_in;
     buf_in = (char*)buf_in + sizeof(size_t);
 
-    printf("[Process %d] %s:%d: size_t = %lu, pid = %d, vote = %d, time = %lu, data_len = %lu, \n",
-            getpid(), __func__, __LINE__, t, (*pbuf_out)->pid, (*pbuf_out)->vote, (*pbuf_out)->time_stamp, (*pbuf_out)->data_len);
+//    printf("[Process %d] %s:%d: size_t = %lu, pid = %d, vote = %d, time = %lu, data_len = %lu, \n",
+//            getpid(), __func__, __LINE__, t, (*pbuf_out)->pid, (*pbuf_out)->vote, (*pbuf_out)->time_stamp, (*pbuf_out)->data_len);
 
     if((*pbuf_out)->data_len == 0)
         (*pbuf_out)->data = NULL;
