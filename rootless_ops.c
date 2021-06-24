@@ -169,8 +169,6 @@ int proposalPools_reset(RLO_proposal_state* pools);
 
 // IAR is built on top of bcast, so it's not aware of BC related state changes, only cares about proposal state change.
 
-
-
 typedef struct isend_state isend_state;
 typedef struct isend_state{
     MPI_Request req;
@@ -184,7 +182,6 @@ typedef struct bcomm_IAR_state bcomm_IAR_state_t;
 struct Proposal_state{
     RLO_ID pid; // proposal ID, default = -1;
     int recv_proposal_from;             /* The rank from where I received a proposal, also report votes to this rank. */
-//    int proposal_sent_cnt;
     RLO_Vote vote; //accumulated vote, default = 1;
     int votes_needed; //num of votes needed to report to parent, equals to the number of sends of a proposal
     int votes_recved;
@@ -209,10 +206,6 @@ struct progress_engine {
     queue queue_wait_and_pickup;//act like have both two roles above
 
     queue queue_iar_pending; //store received proposal msgs
-
-//    bcomm_GEN_msg_t
-//        *rcv_q_head,
-//        *rcv_q_tail; // Used by BC, proposal, vote, decision
 
     unsigned int bc_incomplete;
     unsigned int recved_bcast_cnt;
@@ -246,7 +239,6 @@ struct progress_engine {
     void *app_ctx;
     iar_cb_func_t proposal_action; //if a proposal is approved, what to do with it.
 
-    //debug variables
     int fwd_queued;
     RLO_engine_t* prev;
     RLO_engine_t* next;
@@ -257,8 +249,6 @@ int msg_wait(RLO_engine_t* eng, RLO_msg_t* msg_in);
 int make_progress_gen(RLO_engine_t* eng, RLO_msg_t** recv_msg_out);
 
 int _test_ircecv_completed(RLO_engine_t* eng, RLO_msg_t* msg_buf);
-
-//int _gen_bc_msg_handler(bcomm_engine_t* eng, bcomm_GEN_msg_t* recv_msg_buf_in);
 
 //Generic function, to (re)post a irecv. Used by BC, IAR and all other places that need a buff to recv.
 int _post_irecv_gen(RLO_engine_t* eng, RLO_msg_t* recv_msg_buf, enum RLO_COMM_TAGS rcv_tag);
@@ -288,7 +278,6 @@ int _bc_forward(RLO_engine_t* eng, RLO_msg_t* msg);//new version
 //For irecv and other generic use
 RLO_msg_t* RLO_msg_new_generic(RLO_engine_t* eng) {
     RLO_msg_t* new_msg = calloc(1, sizeof(RLO_msg_t));
-    //printf("%s:%u - rank = %03d: new_msg = %p\n", __func__, __LINE__, eng->my_bcomm->my_rank, new_msg);
     new_msg->msg_usr.pid = -1;
     new_msg->msg_usr.type = -1;
     new_msg->msg_usr.vote = -1;
